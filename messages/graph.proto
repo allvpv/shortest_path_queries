@@ -1,0 +1,41 @@
+syntax="proto3";
+
+service GraphServer {
+    rpc ReceiveGraphDefinition(GraphDefinition) returns (GraphDefinitionConfirmed);
+    rpc ReceiveGraphPieces(stream GraphPiece) returns (GraphConfirmed);
+}
+
+message GraphDefinition {
+    uint64 graph_id = 1;
+    uint64 nodes_count = 2;
+    uint64 edges_count = 3;
+}
+
+// Protocol Buffers are not designed to handle large messages. 
+// Send the graph in pieces. Keep each piece under 1Mb
+message GraphPiece {
+    repeated Node nodes = 1;
+    repeated Edge edges = 2;
+}
+
+message Node {
+    uint64 node_id = 1;
+}
+
+message Edge {
+    uint64 edge_id = 1;
+    uint64 node_from_id = 2;
+    uint64 node_to_id = 3;
+    uint64 weight = 4;
+
+    bool is_boundary_edge = 5;
+}
+
+message GraphDefinitionConfirmed {
+    uint64 graph_id = 1;
+}
+
+message GraphConfirmed {
+    uint64 graph_id = 1;
+}
+
