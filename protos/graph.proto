@@ -1,6 +1,7 @@
 syntax="proto3";
 
-service GraphServer {
+// Interface exported by the worker
+service WorkerService {
     rpc ReceiveGraphDefinition(GraphDefinition) returns (GraphDefinitionConfirmed);
     rpc ReceiveGraphPieces(stream GraphPiece) returns (GraphConfirmed);
 }

@@ -5,6 +5,6 @@
 ## How to build
 
 ```shell
-bazel run //main:worker -- --help
+bazel run //worker:worker -- --help
 ```
 
