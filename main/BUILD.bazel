@@ -1,0 +1,7 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+
+cc_binary(
+    name = "worker",
+    srcs = ["worker.cpp", "worker.hpp"],
+    deps = ["@boost//:asio", "@boost//:program_options", "@boost//:endian"],
+)

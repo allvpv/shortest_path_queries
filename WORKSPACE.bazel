@@ -1,0 +1,15 @@
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# Boost
+# Makes @boost available for use: For example, add `@boost//:algorithm` to your deps.
+# For more, see https://github.com/nelhage/rules_boost and https://www.boost.org
+
+http_archive(
+    name = "com_github_nelhage_rules_boost",
+    # Replace the commit hash in both places (below) with the latest
+    url = "https://github.com/nelhage/rules_boost/archive/62154b14be8012bcc9b444b180fa2d8cf56816ff.tar.gz",
+    strip_prefix = "rules_boost-62154b14be8012bcc9b444b180fa2d8cf56816ff",
+)
+
+load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
+boost_deps()
