@@ -4,9 +4,8 @@ cc_binary(
     name = "worker",
     srcs = ["worker.cpp", "worker.hpp"],
     deps = [
-        "@boost//:asio",
         "@boost//:program_options",
-        "@boost//:endian",
-        "graph_cpp_grpc/graph_cpp_grpc"
+        "//worker/graph_cpp_grpc:graph_cpp_grpc",
+        "@com_github_google_glog//:glog",
     ],
 )
