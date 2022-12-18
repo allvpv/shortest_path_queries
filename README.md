@@ -6,5 +6,6 @@
 
 ```shell
 bazel run //worker:worker -- --help
+bazel run //partitioner:partitioner -- --help
 ```
 
