@@ -24,7 +24,7 @@ class WorkerImpl final : public WorkerService::Service {
         return {};
     }
 
-    virtual grpc::Status ReceiveGraphPieces(grpc::ServerContext* context,
+    grpc::Status ReceiveGraphPieces(grpc::ServerContext* context,
         grpc::ServerReader<GraphPiece>* reader, GraphConfirmed* response) override {
         GraphPiece piece;
 
