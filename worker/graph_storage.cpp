@@ -33,7 +33,7 @@ bool GraphStorage::addEdge(NodeId from, NodeId to, u64 weight, bool is_boundary_
     auto get_from_id = [this](NodeId id) -> Node* {
         auto it = this->id_node_map.find(id);
 
-        if (it != this->id_node_map.end()) {
+        if (it == this->id_node_map.end()) {
             LOG(ERROR) << "Error. Canot find [id: " << id << "] node, but edge contains it";
             return nullptr;
         }
