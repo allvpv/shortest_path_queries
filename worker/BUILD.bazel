@@ -1,11 +1,26 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
+cc_library(
+    name = "graph_storage",
+    srcs = ["graph_storage.cpp", "common.hpp"],
+    hdrs = ["graph_storage.hpp"],
+    deps = [
+        "@absl//absl/log",
+        "@absl//absl/log:check",
+    ],
+)
+
 cc_binary(
     name = "worker",
-    srcs = ["worker.cpp", "worker.hpp"],
+    srcs = ["worker.cpp", "common.hpp"],
     deps = [
-        "@boost//:program_options",
+        "@absl//absl/log",
+        "@absl//absl/strings",
+        "@absl//absl/log:check",
+        "@absl//absl/log:initialize",
+        "@absl//absl/flags:flag",
+        "@absl//absl/flags:parse",
         "//worker/graph_cpp_grpc:graph_cpp_grpc",
-        "@com_github_google_glog//:glog",
+        ":graph_storage"
     ],
 )

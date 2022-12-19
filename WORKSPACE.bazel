@@ -1,17 +1,5 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-# Boost
-# Makes @boost available for use: For example, add `@boost//:algorithm` to your deps.
-# For more, see https://github.com/nelhage/rules_boost and https://www.boost.org
-http_archive(
-    name = "com_github_nelhage_rules_boost",
-    # Replace the commit hash in both places (below) with the latest
-    url = "https://github.com/nelhage/rules_boost/archive/62154b14be8012bcc9b444b180fa2d8cf56816ff.tar.gz",
-    strip_prefix = "rules_boost-62154b14be8012bcc9b444b180fa2d8cf56816ff",
-)
-
-load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
-boost_deps()
+load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
 #
 # gRPC
@@ -42,20 +30,12 @@ load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 grpc_extra_deps()
 
 #
-# Google Log
+# Abseil
 #
-http_archive(
-    name = "com_github_gflags_gflags",
-    sha256 = "34af2f15cf7367513b352bdcd2493ab14ce43692d2dcd9dfc499492966c64dcf",
-    strip_prefix = "gflags-2.2.2",
-    urls = ["https://github.com/gflags/gflags/archive/v2.2.2.tar.gz"],
-)
-
-http_archive(
-    name = "com_github_google_glog",
-    sha256 = "122fb6b712808ef43fbf80f75c52a21c9760683dae470154f02bddfc61135022",
-    strip_prefix = "glog-0.6.0",
-    urls = ["https://github.com/google/glog/archive/v0.6.0.zip"],
+git_repository(
+    name = "absl",
+    remote = "https://github.com/abseil/abseil-cpp.git",
+    commit = "2468b189eec992ff810f88d7dfbdc5c4dd9094ea",
 )
 
 #
@@ -72,3 +52,4 @@ http_archive(
 )
 load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
 hedron_compile_commands_setup()
+

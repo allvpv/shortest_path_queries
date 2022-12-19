@@ -8,8 +8,10 @@ service WorkerService {
 
 message GraphDefinition {
     uint64 graph_id = 1;
-    uint64 nodes_count = 2;
-    uint64 edges_count = 3;
+}
+
+message GraphDefinitionConfirmed {
+    uint64 graph_id = 1;
 }
 
 // Protocol Buffers are not designed to handle large messages. 
@@ -19,24 +21,19 @@ message GraphPiece {
     repeated Edge edges = 2;
 }
 
+message GraphConfirmed {
+    uint64 graph_id = 1;
+}
+
 message Node {
     uint64 node_id = 1;
 }
 
 message Edge {
-    uint64 edge_id = 1;
     uint64 node_from_id = 2;
     uint64 node_to_id = 3;
     uint64 weight = 4;
-
     bool is_boundary_edge = 5;
 }
 
-message GraphDefinitionConfirmed {
-    uint64 graph_id = 1;
-}
-
-message GraphConfirmed {
-    uint64 graph_id = 1;
-}
 
