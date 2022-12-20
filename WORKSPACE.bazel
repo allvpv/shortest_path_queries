@@ -2,9 +2,18 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
 #
+# Protocol Buffers
+#
+http_archive(
+    name = "com_google_protobuf",
+    sha256 = "22fdaf641b31655d4b2297f9981fa5203b2866f8332d3c6333f6b0107bb320de",
+    strip_prefix = "protobuf-21.12",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/v21.12.tar.gz"],
+)
+
+#
 # gRPC
 #
-
 http_archive(
     name = "rules_proto_grpc",
     sha256 = "fb7fc7a3c19a92b2f15ed7c4ffb2983e956625c1436f57a3430b897ba9864059",
@@ -52,4 +61,5 @@ http_archive(
 )
 load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
 hedron_compile_commands_setup()
+
 

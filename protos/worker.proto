@@ -1,0 +1,46 @@
+syntax="proto3";
+
+// Interface exported by the worker node.
+service WorkerService {
+    rpc IsNodePresent(IsNodePresentRequest) returns (IsNodePresentResponse);
+    rpc UpdateDjikstra(stream RequestDjikstra) returns (stream ResponseDjikstra);
+}
+
+message IsNodePresentRequest {
+    uint32 node_id = 1;
+}
+
+message IsNodePresentResponse {
+    bool present = 1;
+}
+
+message RequestDjikstra {
+    // If `node_id` not present, then this element is "foreign" to worker (node
+    // belongs to another worker). There will be at most one such element sent
+    // in UpdateDjikstra stream and it will have the largest
+    // `shortest_path_len`.
+    message QueueElement {
+        optional uint64 node_id = 2;
+        uint64 shortest_path_len = 3;
+    }
+
+    // First message in the stream must be request_id
+    oneof RequestType {
+        uint32 request_id = 1;
+        QueueElement element = 2;
+    }
+}
+
+// New elements in queue after processing in worker (before foreign node pops on
+// the top of the local queue).
+message ResponseDjikstra {
+    message QueueElement {
+        uint64 node_id = 1;
+        uint64 shortest_path_len = 2;
+        // If the node is outside the scope of this worker, node_worker_id is ID
+        // of worker to which the node belongs.
+        optional uint32 node_worker_id = 3;
+    }
+
+    QueueElement element = 1;
+}

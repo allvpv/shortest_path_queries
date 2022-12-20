@@ -3,5 +3,6 @@ BasedOnStyle: WebKit
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Attach
 ColumnLimit: '100'
-
+BinPackParameters: false
+AlignAfterOpenBracket: true
 ...

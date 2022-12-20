@@ -1,0 +1,53 @@
+syntax="proto3";
+import "google/protobuf/empty.proto";
+
+// Interface exported by the parser/manager node.
+service ManagerService {
+    // Methods for use by workers
+    rpc RegisterWorker(google.protobuf.Empty) returns (WorkerMetadata);
+    rpc GetGraphDefinition(google.protobuf.Empty) returns (GraphMetadata);
+    rpc GetGraphFragment(GraphMetadata) returns (stream GraphPiece);
+
+    // Methods for use by executers
+    rpc GetWorkersList(google.protobuf.Empty) returns (WorkersList);
+}
+
+message WorkerMetadata {
+    uint32 worker_id = 1;
+}
+
+message GraphMetadata {
+    uint32 graph_id = 1;
+}
+
+message WorkersList {
+    message WorkerEntry {
+        uint32 worker_id = 1;
+        string address = 2;
+    }
+
+    repeated WorkerEntry workers = 1;
+}
+
+
+// Protocol Buffers are not designed to handle large messages. 
+// Send the graph in pieces. Keep each piece under 1Mb
+message GraphPiece {
+    message Node {
+        uint64 node_id = 1;
+    }
+
+    message Edge {
+        uint64 node_from_id = 2;
+        uint64 node_to_id = 3;
+        uint64 weight = 4;
+
+        // If the edge is a boundary edge, this field is present and denoes id of
+        // the next worker.
+        optional uint32 node_to_worker_id = 5;
+    }
+
+    repeated Node nodes = 1;
+    repeated Edge edges = 2;
+}
+
