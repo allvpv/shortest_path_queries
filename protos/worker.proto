@@ -14,11 +14,6 @@ message IsNodePresentResponse {
     bool present = 1;
 }
 
-enum Action {
-    POP = 0;
-    PUSH = 1;
-}
-
 message RequestDjikstra {
     message NewMyElement {
         uint64 node_id = 1;
