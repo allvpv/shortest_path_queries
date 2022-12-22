@@ -24,9 +24,9 @@ message RequestDjikstra {
         uint64 shortest_path_len = 1;
     }
 
-    // First message in the stream must be `request_id`.
-    // Message `new_my` may appear multiple times in the stream.
-    // Last message must be `smallest_foreign`.
+    // First message in the stream must be `request_id`. Message `new_my` may
+    // appear multiple times in the stream. Last message must be
+    // `smallest_foreign`.
     oneof RequestType {
         uint32 request_id = 1;
         NewMyElement new_my_el = 2;
@@ -35,6 +35,11 @@ message RequestDjikstra {
 }
 
 message ResponseDjikstra {
+    message Success {
+        uint64 node_id = 1;
+        uint64 shortest_path_len = 2;
+    }
+
     message NewForeignElement {
         uint64 node_id = 1;
         uint32 worker_id = 2;
@@ -45,11 +50,13 @@ message ResponseDjikstra {
         uint64 shortest_path_len = 1;
     }
 
-    // Message `new_foreign` may appear multiple times in the stream.
-    // Last message must be `smallest_my`.
+    // One success, single `success` message is sent.
+    // Otherwise, message `new_foreign` may appear multiple times in the stream
+    // and last message must be `smallest_my`.
     oneof ResponseType {
-        NewForeignElement new_foreign_el = 1;
-        SmallestMyElement smallest_my_el = 2;
+        Success success = 1;
+        NewForeignElement new_foreign_el = 2;
+        SmallestMyElement smallest_my_el = 3;
     }
 }
 
