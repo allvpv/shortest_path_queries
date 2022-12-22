@@ -1,16 +1,8 @@
-load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@rules_proto_grpc//python:defs.bzl", "python_grpc_library")
-
-python_grpc_library(
-    name = "graph_py_grpc",
-    protos = ["//protos:graph_proto"],
-)
-
 py_binary(
     name = "partitioner",
     main = "main.py",
     srcs = glob(["**/*.py"]),
-    deps = [":graph_py_grpc"],
+    deps = ["//protos:manager_py_grpc"],
     visibility = ["//visibility:public"],
     legacy_create_init = True,
 )
