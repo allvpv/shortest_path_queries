@@ -6,7 +6,7 @@ service ManagerService {
     // Methods for use by workers
     rpc RegisterWorker(google.protobuf.Empty) returns (WorkerMetadata);
     rpc GetGraphDefinition(google.protobuf.Empty) returns (GraphMetadata);
-    rpc GetGraphFragment(GraphMetadata) returns (stream GraphPiece);
+    rpc GetGraphFragment(google.protobuf.Empty) returns (stream GraphPiece);
 
     // Methods for use by executers
     rpc GetWorkersList(google.protobuf.Empty) returns (WorkersList);
