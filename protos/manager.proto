@@ -30,24 +30,23 @@ message WorkersList {
 }
 
 
-// Protocol Buffers are not designed to handle large messages. 
-// Send the graph in pieces. Keep each piece under 1Mb
-message GraphPiece {
-    message Node {
-        uint64 node_id = 1;
-    }
-
-    message Edge {
-        uint64 node_from_id = 2;
-        uint64 node_to_id = 3;
-        uint64 weight = 4;
-
-        // If the edge is a boundary edge, this field is present and denoes id of
-        // the next worker.
-        optional uint32 node_to_worker_id = 5;
-    }
-
-    repeated Node nodes = 1;
-    repeated Edge edges = 2;
+message Node {
+    uint64 node_id = 1;
 }
 
+message Edge {
+    uint64 node_from_id = 2;
+    uint64 node_to_id = 3;
+    uint64 weight = 4;
+
+    // If the edge is a boundary edge, this field is present and denoes id of
+    // the next worker.
+    optional uint32 node_to_worker_id = 5;
+}
+
+message GraphPiece {
+    oneof GraphElement {
+        Node nodes = 1;
+        Edge edges = 2;
+    }
+}
