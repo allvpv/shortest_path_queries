@@ -106,7 +106,7 @@ impl Worker for WorkerService {
         request: Request<tonic::Streaming<RequestDjikstra>>,
     ) -> Result<Response<Self::UpdateDjikstraStream>, Status> {
         let mut inbound = request.into_inner();
-        let next_message = inbound.message().await?.map(|r| r.request_type).flatten();
+        let next_message = inbound.message().await?.and_then(|r| r.request_type);
 
         use crate::worker_service::worker::request_djikstra::RequestType::RequestId as ProtoRequestId;
 
@@ -125,7 +125,7 @@ impl Worker for WorkerService {
                 .expect("RequestProcessor djikstra_step task panicked")?;
 
         self.put_request_processor(request_id, request_processor)?;
-        let result_iter = result_vec.into_iter().map(|s| Ok(s));
+        let result_iter = result_vec.into_iter().map(Ok);
         let output = futures::stream::iter(result_iter);
 
         Ok(Response::new(Box::pin(output)))
