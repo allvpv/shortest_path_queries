@@ -47,7 +47,7 @@ impl RequestProcessor {
         }
     }
 
-    // Applies updates for this RequestID worker 
+    // Applies updates for this RequestID worker
     pub async fn apply_update(
         &mut self,
         inbound: &mut tonic::codec::Streaming<RequestDjikstra>,

@@ -9,8 +9,8 @@ use clap::Parser;
 use tonic::transport::Server;
 
 use crate::graph_receiver::GraphReceiver;
-use crate::worker_service::WorkerService;
 use crate::worker_service::worker::worker_server::WorkerServer;
+use crate::worker_service::WorkerService;
 
 #[derive(Parser)]
 struct Args {
@@ -19,6 +19,8 @@ struct Args {
     #[arg(long)]
     listening_addr: String,
 }
+
+pub struct ErrorCollection {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
@@ -46,12 +48,17 @@ async fn async_main(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
     let listening_addr = match args.listening_addr.parse() {
         Ok(addr) => addr,
-        Err(err) => return Err(format!("Cannot parse address `{}`: {err}", args.listening_addr).into()),
+        Err(err) => {
+            return Err(format!("Cannot parse address `{}`: {err}", args.listening_addr).into())
+        }
     };
 
     let server = WorkerServer::new(service);
 
-    Server::builder().add_service(server).serve(listening_addr).await?;
+    Server::builder()
+        .add_service(server)
+        .serve(listening_addr)
+        .await?;
 
     Ok(())
 }

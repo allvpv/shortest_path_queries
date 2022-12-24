@@ -15,6 +15,7 @@ use worker::{IsPresent, NodeId as NodeIdProto, RequestDjikstra, ResponseDjikstra
 use crate::graph_store::NodeMapping;
 use crate::graph_store::SPQGraph;
 use crate::request_processor::{RequestId, RequestProcessor};
+use crate::ErrorCollection;
 
 #[derive(Debug)]
 enum RequestProcessorHolder {
@@ -39,6 +40,51 @@ impl WorkerService {
             requests: Mutex::new(RequestIdProcessorMap::new()),
         }
     }
+
+    fn get_request_processor(&self, request_id: RequestId) -> Result<RequestProcessor, Status> {
+        use std::collections::hash_map::Entry::{Occupied, Vacant};
+
+        let processor = {
+            match self
+                .requests
+                .lock()
+                .map_err(ErrorCollection::locking_mutex)?
+                .entry(request_id)
+            {
+                Vacant(entry) => {
+                    entry.insert(RequestProcessorHolder::Busy);
+                    RequestProcessor::new(self.graph.clone(), self.mapping.clone())
+                }
+                Occupied(mut entry) => match entry.insert(RequestProcessorHolder::Busy) {
+                    RequestProcessorHolder::Busy => {
+                        return Err(ErrorCollection::duplicate_request())
+                    }
+                    RequestProcessorHolder::Ready(processor) => processor,
+                },
+            }
+        };
+
+        Ok(processor)
+    }
+
+    fn put_request_processor(
+        &self,
+        request_id: RequestId,
+        request_processor: RequestProcessor,
+    ) -> Result<(), Status> {
+        if let Some(holder) = self
+            .requests
+            .lock()
+            .map_err(ErrorCollection::locking_mutex)?
+            .get_mut(&request_id)
+        {
+            *holder = RequestProcessorHolder::Ready(request_processor);
+        } else {
+            unreachable!();
+        }
+
+        Ok(())
+    }
 }
 
 #[tonic::async_trait]
@@ -61,43 +107,16 @@ impl Worker for WorkerService {
         request: Request<tonic::Streaming<RequestDjikstra>>,
     ) -> Result<Response<Self::UpdateDjikstraStream>, Status> {
         let mut inbound = request.into_inner();
+        let next_message = inbound.message().await?.map(|r| r.request_type).flatten();
 
         use crate::worker_service::worker::request_djikstra::RequestType::RequestId as ProtoRequestId;
 
-        let next_message = inbound.message().await?.map(|r| r.request_type).flatten();
-
         let request_id: RequestId = match next_message {
             Some(ProtoRequestId(id)) => id,
-            _ => {
-                return Err(Status::invalid_argument(
-                    "First message in UpdateDjikstra stream must be request_id",
-                ))
-            }
+            _ => return Err(ErrorCollection::wrong_first_message()),
         };
 
-        let mutex_error = |e| Status::internal(format!("Internal error while locking mutex: {e}"));
-        let duplicate_request_error = || {
-            Status::invalid_argument(
-                "Error. Executer requested UpdateDjikstra, while another \
-                 UpdateDjikstra on this query was already pending",
-            )
-        };
-
-        use std::collections::hash_map::Entry::{Occupied, Vacant};
-
-        let mut request_processor = {
-            match self.requests.lock().map_err(mutex_error)?.entry(request_id) {
-                Vacant(entry) => {
-                    entry.insert(RequestProcessorHolder::Busy);
-                    RequestProcessor::new(self.graph.clone(), self.mapping.clone())
-                }
-                Occupied(mut entry) => match entry.insert(RequestProcessorHolder::Busy) {
-                    RequestProcessorHolder::Busy => return Err(duplicate_request_error()),
-                    RequestProcessorHolder::Ready(server) => server,
-                },
-            }
-        };
-
+        let mut request_processor = self.get_request_processor(request_id)?;
         request_processor.apply_update(&mut inbound).await?;
 
         // We move the server in and out the task to satisfy borrow checker
@@ -105,21 +124,28 @@ impl Worker for WorkerService {
             tokio::task::spawn_blocking(move || request_processor.djikstra_step())
                 .await
                 .expect("RequestProcessor djikstra_step task panicked")?;
+
+        self.put_request_processor(request_id, request_processor)?;
         let result_iter = result_vec.into_iter().map(|s| Ok(s));
         let output = futures::stream::iter(result_iter);
 
-        // Give back server to the RequestProcessorHolder
-        if let Some(holder) = self
-            .requests
-            .lock()
-            .map_err(mutex_error)?
-            .get_mut(&request_id)
-        {
-            *holder = RequestProcessorHolder::Ready(request_processor);
-        } else {
-            unreachable!();
-        }
-
         Ok(Response::new(Box::pin(output)))
+    }
+}
+
+impl ErrorCollection {
+    fn wrong_first_message() -> Status {
+        Status::invalid_argument("First message in UpdateDjikstra stream must be request_id")
+    }
+
+    fn locking_mutex(e: impl std::error::Error) -> Status {
+        Status::internal(format!("Internal error while locking mutex: {e}"))
+    }
+
+    fn duplicate_request() -> Status {
+        Status::invalid_argument(
+            "Error. Executer requested UpdateDjikstra, while another \
+             UpdateDjikstra on this query was already pending",
+        )
     }
 }
