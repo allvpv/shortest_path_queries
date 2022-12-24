@@ -10,13 +10,15 @@ use manager::manager_service_client::ManagerServiceClient;
 
 use crate::graph_store;
 
-use graph_store::IdIdxMapper;
+use graph_store::{
+    IdIdxMapper, IdIdxMapping, NodeIdx, NodePointer, SPQGraph, SomeGraphMethods, WorkerId,
+};
 
 pub struct GraphReceiver {
     pub client: ManagerServiceClient<Channel>,
-    pub worker_id: graph_store::WorkerId,
-    pub graph: graph_store::SPQGraph,
-    pub mapping: graph_store::NodeMapping,
+    pub worker_id: WorkerId,
+    pub graph: SPQGraph,
+    pub mapping: IdIdxMapping,
 }
 
 impl GraphReceiver {
@@ -27,8 +29,8 @@ impl GraphReceiver {
         Ok(GraphReceiver {
             client,
             worker_id,
-            graph: graph_store::SPQGraph::new(),
-            mapping: graph_store::NodeMapping::new(),
+            graph: SPQGraph::new(),
+            mapping: IdIdxMapping::new(),
         })
     }
 
@@ -41,27 +43,22 @@ impl GraphReceiver {
 
         while let Some(response) = stream.message().await? {
             use graph_piece::GraphElement::{Edges, Nodes};
-            use graph_store::{DefaultIx, EdgeData};
 
             match response.graph_element {
                 Some(Nodes(node)) => {
-                    let node_id = node.node_id;
-                    let node_idx = self.graph.add_node(node_id).index() as DefaultIx;
-
-                    self.mapping.insert(node_id, node_idx);
+                    let node_idx = self.graph.add_node(node.node_id) as NodeIdx;
+                    self.mapping.insert(node.node_id, node_idx);
                 }
                 Some(Edges(edge)) => {
-                    let node_from_id = self.mapping.get_mapping(edge.node_from_id)?;
-                    let node_to_id = self.mapping.get_mapping(edge.node_to_id)?;
+                    let node_from_idx = self.mapping.get_mapping(edge.node_from_id)?;
+                    // If `worker_id` is present, then the edge points to foreign node that belongs
+                    // to some other worker
+                    let pointer_to = match edge.node_to_worker_id {
+                        Some(worker_id) => NodePointer::Foreign(edge.node_to_id, worker_id),
+                        None => NodePointer::Domestic(self.mapping.get_mapping(edge.node_to_id)?),
+                    };
 
-                    self.graph.add_edge(
-                        node_from_id.into(),
-                        node_to_id.into(),
-                        EdgeData {
-                            weight: edge.weight,
-                            worker_id: edge.node_to_worker_id.unwrap_or(self.worker_id),
-                        },
-                    );
+                    self.graph.add_edge(node_from_idx, pointer_to, edge.weight);
                 }
                 None => {
                     eprintln!("Warning: Got empty GraphPiece with no node or edge");

@@ -12,14 +12,13 @@ use tonic::{Request, Response, Status};
 use worker::worker_server::Worker;
 use worker::{IsPresent, NodeId as NodeIdProto, RequestDjikstra, ResponseDjikstra};
 
-use crate::graph_store::NodeMapping;
-use crate::graph_store::SPQGraph;
+use crate::graph_store::{IdIdxMapping, SPQGraph};
 use crate::request_processor::{RequestId, RequestProcessor};
 use crate::ErrorCollection;
 
 #[derive(Debug)]
 enum RequestProcessorHolder {
-    Busy, // The request is pending, RequestServer was moved to blocking thread
+    Busy, // The request is pending, RequestProcessor was moved to blocking thread
     Ready(RequestProcessor),
 }
 
@@ -28,12 +27,12 @@ type RequestIdProcessorMap = HashMap<RequestId, RequestProcessorHolder>;
 #[derive(Debug)]
 pub struct WorkerService {
     graph: Arc<SPQGraph>,
-    mapping: Arc<NodeMapping>,
+    mapping: Arc<IdIdxMapping>,
     requests: Mutex<RequestIdProcessorMap>,
 }
 
 impl WorkerService {
-    pub fn new(graph: SPQGraph, mapping: NodeMapping) -> Self {
+    pub fn new(graph: SPQGraph, mapping: IdIdxMapping) -> Self {
         WorkerService {
             graph: Arc::new(graph),
             mapping: Arc::new(mapping),
@@ -119,7 +118,7 @@ impl Worker for WorkerService {
         let mut request_processor = self.get_request_processor(request_id)?;
         request_processor.apply_update(&mut inbound).await?;
 
-        // We move the server in and out the task to satisfy borrow checker
+        // Move the processor in and out the task to satisfy borrow checker
         let (request_processor, result_vec) =
             tokio::task::spawn_blocking(move || request_processor.djikstra_step())
                 .await

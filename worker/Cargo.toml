@@ -12,7 +12,6 @@ tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "sync", "tim
 tokio-stream = "0.1"
 async-stream = "0.2"
 clap = { version = "4.0.32", features = ["derive"] }
-petgraph = "0.6.2"
 num_cpus = "1.15.0"
 
 [build-dependencies]

@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use tonic::Status;
 
-use crate::graph_store::{DefaultIx, IdIdxMapper, NodeId, NodeMapping, SPQGraph, ShortestPathLen};
+use crate::graph_store::{IdIdxMapper, IdIdxMapping, NodeId, NodeIdx, SPQGraph, ShortestPathLen};
 use crate::worker_service::worker::{RequestDjikstra, ResponseDjikstra};
 
 pub type RequestId = u32;
@@ -12,7 +12,7 @@ pub type RequestId = u32;
 #[derive(Debug)]
 pub struct RequestProcessor {
     graph: Arc<SPQGraph>,
-    mapping: Arc<NodeMapping>,
+    mapping: Arc<IdIdxMapping>,
     visited: HashSet<NodeId>,
     queue: BinaryHeap<QueueElement>,
     smallest_foreign: Option<ShortestPathLen>,
@@ -20,7 +20,7 @@ pub struct RequestProcessor {
 
 #[derive(Eq, PartialEq, Debug)]
 struct QueueElement {
-    ix: DefaultIx,
+    ix: NodeIdx,
     sp_len: ShortestPathLen,
 }
 
@@ -37,7 +37,7 @@ impl PartialOrd for QueueElement {
 }
 
 impl RequestProcessor {
-    pub fn new(graph: Arc<SPQGraph>, mapping: Arc<NodeMapping>) -> Self {
+    pub fn new(graph: Arc<SPQGraph>, mapping: Arc<IdIdxMapping>) -> Self {
         RequestProcessor {
             graph,
             mapping,

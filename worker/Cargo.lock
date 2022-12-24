@@ -1245,7 +1245,6 @@ dependencies = [
  "futures",
  "futures-util",
  "num_cpus",
- "petgraph",
  "prost",
  "tokio",
  "tokio-stream",

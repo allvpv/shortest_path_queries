@@ -36,7 +36,7 @@ message Edge {
     uint64 node_to_id = 3;
     uint64 weight = 4;
 
-    // If the edge is a boundary edge, this field is present and denoes id of
+    // If the edge is a boundary edge, this field is present and denotes ID of
     // the next worker.
     optional uint32 node_to_worker_id = 5;
 }
