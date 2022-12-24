@@ -1,6 +1,6 @@
 mod graph_receiver;
 mod graph_store;
-mod request_server;
+mod request_processor;
 mod worker_service;
 
 use std::string::String;

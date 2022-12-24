@@ -14,21 +14,21 @@ use worker::{IsPresent, NodeId as NodeIdProto, RequestDjikstra, ResponseDjikstra
 
 use crate::graph_store::NodeMapping;
 use crate::graph_store::SPQGraph;
-use crate::request_server::{RequestId, RequestServer};
+use crate::request_processor::{RequestId, RequestProcessor};
 
 #[derive(Debug)]
-enum RequestServerHolder {
+enum RequestProcessorHolder {
     Busy, // The request is pending, RequestServer was moved to blocking thread
-    Ready(RequestServer),
+    Ready(RequestProcessor),
 }
 
-type RequestIdServerMap = HashMap<RequestId, RequestServerHolder>;
+type RequestIdProcessorMap = HashMap<RequestId, RequestProcessorHolder>;
 
 #[derive(Debug)]
 pub struct WorkerService {
     graph: Arc<SPQGraph>,
     mapping: Arc<NodeMapping>,
-    requests: Mutex<RequestIdServerMap>,
+    requests: Mutex<RequestIdProcessorMap>,
 }
 
 impl WorkerService {
@@ -36,7 +36,7 @@ impl WorkerService {
         WorkerService {
             graph: Arc::new(graph),
             mapping: Arc::new(mapping),
-            requests: Mutex::new(RequestIdServerMap::new()),
+            requests: Mutex::new(RequestIdProcessorMap::new()),
         }
     }
 }
@@ -85,41 +85,41 @@ impl Worker for WorkerService {
 
         use std::collections::hash_map::Entry::{Occupied, Vacant};
 
-        let mut request_server = {
+        let mut request_processor = {
             match self.requests.lock().map_err(mutex_error)?.entry(request_id) {
                 Vacant(entry) => {
-                    entry.insert(RequestServerHolder::Busy);
-                    RequestServer::new(self.graph.clone(), self.mapping.clone())
+                    entry.insert(RequestProcessorHolder::Busy);
+                    RequestProcessor::new(self.graph.clone(), self.mapping.clone())
                 }
-                Occupied(mut entry) => match entry.insert(RequestServerHolder::Busy) {
-                    RequestServerHolder::Busy => return Err(duplicate_request_error()),
-                    RequestServerHolder::Ready(server) => server,
+                Occupied(mut entry) => match entry.insert(RequestProcessorHolder::Busy) {
+                    RequestProcessorHolder::Busy => return Err(duplicate_request_error()),
+                    RequestProcessorHolder::Ready(server) => server,
                 },
             }
         };
 
-        request_server.apply_update(&mut inbound).await?;
+        request_processor.apply_update(&mut inbound).await?;
 
         // We move the server in and out the task to satisfy borrow checker
-        let (request_server, result_vec) =
-            tokio::task::spawn_blocking(move || request_server.djikstra_step())
+        let (request_processor, result_vec) =
+            tokio::task::spawn_blocking(move || request_processor.djikstra_step())
                 .await
-                .expect("RequestServer task panicked")?;
+                .expect("RequestProcessor djikstra_step task panicked")?;
         let result_iter = result_vec.into_iter().map(|s| Ok(s));
         let output = futures::stream::iter(result_iter);
 
-        // Give back server to the RequestServerHolder
+        // Give back server to the RequestProcessorHolder
         if let Some(holder) = self
             .requests
             .lock()
             .map_err(mutex_error)?
             .get_mut(&request_id)
         {
-            *holder = RequestServerHolder::Ready(request_server);
+            *holder = RequestProcessorHolder::Ready(request_processor);
         } else {
             unreachable!();
         }
 
-        Ok(Response::new(Box::pin(output) as Self::UpdateDjikstraStream))
+        Ok(Response::new(Box::pin(output)))
     }
 }

@@ -10,7 +10,7 @@ use crate::worker_service::worker::{RequestDjikstra, ResponseDjikstra};
 pub type RequestId = u32;
 
 #[derive(Debug)]
-pub struct RequestServer {
+pub struct RequestProcessor {
     graph: Arc<SPQGraph>,
     mapping: Arc<NodeMapping>,
     visited: HashSet<NodeId>,
@@ -36,9 +36,9 @@ impl PartialOrd for QueueElement {
     }
 }
 
-impl RequestServer {
+impl RequestProcessor {
     pub fn new(graph: Arc<SPQGraph>, mapping: Arc<NodeMapping>) -> Self {
-        RequestServer {
+        RequestProcessor {
             graph,
             mapping,
             visited: HashSet::new(),
