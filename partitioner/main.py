@@ -4,7 +4,7 @@ import grpc
 
 from parsers.open_street_map import OpenStreetMapParser
 from partitioners.grid import GridPartitioner
-from protos.graph_pb2_grpc import *
+from protos.manager_pb2_grpc import *
 
 def main():
     parser = argparse.ArgumentParser(description='Parse graphs and compute node regions')

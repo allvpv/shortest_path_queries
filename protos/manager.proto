@@ -1,11 +1,12 @@
 syntax="proto3";
 import "google/protobuf/empty.proto";
 
+package manager;
+
 // Interface exported by the parser/manager node.
 service ManagerService {
     // Methods for use by workers
     rpc RegisterWorker(google.protobuf.Empty) returns (WorkerMetadata);
-    rpc GetGraphDefinition(google.protobuf.Empty) returns (GraphMetadata);
     rpc GetGraphFragment(google.protobuf.Empty) returns (stream GraphPiece);
 
     // Methods for use by executers
@@ -14,10 +15,6 @@ service ManagerService {
 
 message WorkerMetadata {
     uint32 worker_id = 1;
-}
-
-message GraphMetadata {
-    uint32 graph_id = 1;
 }
 
 message WorkersList {

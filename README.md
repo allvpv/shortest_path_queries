@@ -1,11 +1,27 @@
 # Graph Worker
 
-* Process running on a single node
+* `protos/`
 
-## How to build
+  Our API.
 
-```shell
-bazel run //worker:worker -- --help
-bazel run //partitioner:partitioner -- --help
-```
+* `worker/`
+
+  This is the working process running on a single node
+
+  ```shell
+  cd worker/
+  cargo run -- --help
+  ```
+
+* `partitioner/`
+
+   Partitioner/manager node.
+
+    ```shell
+    bazel run //partitioner:partitioner -- --help
+    ```
+
+* `executer/`
+   Executer node (to be done).
+
 

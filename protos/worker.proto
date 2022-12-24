@@ -1,16 +1,18 @@
 syntax="proto3";
 
+package worker;
+
 // Interface exported by the worker node.
-service WorkerService {
-    rpc IsNodePresent(IsNodePresentRequest) returns (IsNodePresentResponse);
+service Worker {
+    rpc IsNodePresent(NodeId) returns (IsPresent);
     rpc UpdateDjikstra(stream RequestDjikstra) returns (stream ResponseDjikstra);
 }
 
-message IsNodePresentRequest {
-    uint32 node_id = 1;
+message NodeId {
+    uint64 node_id = 1;
 }
 
-message IsNodePresentResponse {
+message IsPresent {
     bool present = 1;
 }
 
