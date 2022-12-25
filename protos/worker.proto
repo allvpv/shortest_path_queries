@@ -26,11 +26,11 @@ message RequestDjikstra {
         uint64 shortest_path_len = 1;
     }
 
-    // First message in the stream must be `request_id`. Message `new_my` may
+    // First message in the stream must be `query_id`. Message `new_my` may
     // appear multiple times in the stream. Last message must be
     // `smallest_foreign`.
-    oneof RequestType {
-        uint32 request_id = 1;
+    oneof MessageType {
+        uint32 query_id = 1;
         NewMyElement new_my_el = 2;
         SmallestForeginElement smallest_foreign_el = 3;
     }

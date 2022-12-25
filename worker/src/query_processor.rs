@@ -7,10 +7,10 @@ use tonic::Status;
 use crate::graph_store::{IdIdxMapper, IdIdxMapping, NodeId, NodeIdx, SPQGraph, ShortestPathLen};
 use crate::worker_service::worker::{RequestDjikstra, ResponseDjikstra};
 
-pub type RequestId = u32;
+pub type QueryId = u32;
 
 #[derive(Debug)]
-pub struct RequestProcessor {
+pub struct QueryProcessor {
     graph: Arc<SPQGraph>,
     mapping: Arc<IdIdxMapping>,
     visited: HashSet<NodeId>,
@@ -20,13 +20,13 @@ pub struct RequestProcessor {
 
 #[derive(Eq, PartialEq, Debug)]
 struct QueueElement {
-    ix: NodeIdx,
-    sp_len: ShortestPathLen,
+    idx: NodeIdx,
+    shortest: ShortestPathLen,
 }
 
 impl Ord for QueueElement {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.sp_len.cmp(&other.sp_len)
+        self.shortest.cmp(&other.shortest)
     }
 }
 
@@ -36,9 +36,9 @@ impl PartialOrd for QueueElement {
     }
 }
 
-impl RequestProcessor {
+impl QueryProcessor {
     pub fn new(graph: Arc<SPQGraph>, mapping: Arc<IdIdxMapping>) -> Self {
-        RequestProcessor {
+        QueryProcessor {
             graph,
             mapping,
             visited: HashSet::new(),
@@ -47,35 +47,35 @@ impl RequestProcessor {
         }
     }
 
-    // Applies updates for this RequestID worker
+    // Applies updates for this query
     pub async fn apply_update(
         &mut self,
         inbound: &mut tonic::codec::Streaming<RequestDjikstra>,
     ) -> Result<(), Status> {
         self.smallest_foreign = None;
 
-        while let Some(request) = inbound.message().await? {
-            use crate::worker_service::worker::request_djikstra::RequestType::{
-                NewMyEl, RequestId as ProtoRequestId, SmallestForeignEl,
+        while let Some(message) = inbound.message().await? {
+            use crate::worker_service::worker::request_djikstra::MessageType::{
+                NewMyEl, QueryId as ProtoQueryId, SmallestForeignEl,
             };
 
-            match request.request_type {
+            match message.message_type {
                 Some(NewMyEl(element)) => {
                     let not_visited = self.visited.replace(element.node_id).is_none();
 
                     if not_visited {
                         self.queue.push(QueueElement {
-                            ix: self.mapping.get_mapping(element.node_id)?,
-                            sp_len: element.shortest_path_len,
+                            idx: self.mapping.get_mapping(element.node_id)?,
+                            shortest: element.shortest_path_len,
                         });
                     }
                 }
                 Some(SmallestForeignEl(foreign)) => {
                     self.smallest_foreign = Some(foreign.shortest_path_len);
                 }
-                Some(ProtoRequestId(id)) => {
+                Some(ProtoQueryId(id)) => {
                     return Err(Status::invalid_argument(format!(
-                        "Duplicated RequestId {id} in the middle of the stream"
+                        "Duplicated QueryId {id} in the middle of the stream"
                     )))
                 }
                 None => break,
@@ -101,15 +101,13 @@ impl RequestProcessor {
             }
 
             for node in self.graph.edges(node.ix.into()) {
-                let next_element = &graph[edge.target()].;
+                let next_element = &graph[edge.target()];
 
                 if self.visited.replace(next_element).is_some() {
                     continue;
                 }
 
-                let
-                let next_element_weight = edge.weight() + node.sp_len;
-
+                let next_sp_len = edge.weight() + node.sp_len;
             }
         }
         */

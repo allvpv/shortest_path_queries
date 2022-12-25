@@ -10,9 +10,7 @@ use manager::manager_service_client::ManagerServiceClient;
 
 use crate::graph_store;
 
-use graph_store::{
-    IdIdxMapper, IdIdxMapping, NodeIdx, NodePointer, SPQGraph, SomeGraphMethods, WorkerId,
-};
+use graph_store::{IdIdxMapper, IdIdxMapping, NodePointer, SPQGraph, SomeGraphMethods, WorkerId};
 
 pub struct GraphReceiver {
     pub client: ManagerServiceClient<Channel>,
@@ -46,7 +44,7 @@ impl GraphReceiver {
 
             match response.graph_element {
                 Some(Nodes(node)) => {
-                    let node_idx = self.graph.add_node(node.node_id) as NodeIdx;
+                    let node_idx = self.graph.add_node(node.node_id);
                     self.mapping.insert(node.node_id, node_idx);
                 }
                 Some(Edges(edge)) => {
