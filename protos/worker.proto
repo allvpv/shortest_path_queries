@@ -17,22 +17,23 @@ message IsPresent {
 }
 
 message RequestDjikstra {
+    message QueryData {
+        uint32 query_id = 1;
+        uint64 final_node_id = 2;
+        optional uint64 smallest_foreign_element = 3;
+    }
+
     message NewMyElement {
         uint64 node_id = 1;
         uint64 shortest_path_len = 2;
     }
 
-    message SmallestForeginElement {
-        uint64 shortest_path_len = 1;
-    }
-
-    // First message in the stream must be `query_id`. Message `new_my` may
+    // First message in the stream must be `query_data`. Message `my_new_el` may
     // appear multiple times in the stream. Last message must be
     // `smallest_foreign`.
     oneof MessageType {
-        uint32 query_id = 1;
+        QueryData query_data = 1;
         NewMyElement new_my_el = 2;
-        SmallestForeginElement smallest_foreign_el = 3;
     }
 }
 
@@ -54,8 +55,8 @@ message ResponseDjikstra {
 
     // One success, single `success` message is sent.
     // Otherwise, message `new_foreign` may appear multiple times in the stream
-    // and last message must be `smallest_my`.
-    oneof ResponseType {
+    // and last message must be `smallest_my_el`.
+    oneof MessageType {
         Success success = 1;
         NewForeignElement new_foreign_el = 2;
         SmallestMyElement smallest_my_el = 3;

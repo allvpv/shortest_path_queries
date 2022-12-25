@@ -17,8 +17,8 @@ pub enum NodePointer {
 
 #[derive(Debug)]
 pub struct EdgePayload {
-    weight: EdgeWeight,
-    to: NodePointer,
+    pub weight: EdgeWeight,
+    pub to: NodePointer,
 }
 
 #[derive(Debug)]

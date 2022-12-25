@@ -5,6 +5,8 @@ use std::sync::Arc;
 use tonic::Status;
 
 use crate::graph_store::{IdIdxMapper, IdIdxMapping, NodeId, NodeIdx, SPQGraph, ShortestPathLen};
+use crate::graph_store::{NodePointer, SomeGraphMethods, VisitedMap};
+use crate::worker_service::worker::{request_djikstra, response_djikstra};
 use crate::worker_service::worker::{RequestDjikstra, ResponseDjikstra};
 
 pub type QueryId = u32;
@@ -13,9 +15,10 @@ pub type QueryId = u32;
 pub struct QueryProcessor {
     graph: Arc<SPQGraph>,
     mapping: Arc<IdIdxMapping>,
-    visited: HashSet<NodeId>,
+    visited: VisitedMap,
     queue: BinaryHeap<QueueElement>,
     smallest_foreign: Option<ShortestPathLen>,
+    final_node: NodeId,
 }
 
 #[derive(Eq, PartialEq, Debug)]
@@ -37,13 +40,25 @@ impl PartialOrd for QueueElement {
 }
 
 impl QueryProcessor {
-    pub fn new(graph: Arc<SPQGraph>, mapping: Arc<IdIdxMapping>) -> Self {
+    fn update_smallest_foreign(
+        smallest_foreign: &mut Option<ShortestPathLen>,
+        new_foreign: ShortestPathLen,
+    ) {
+        if let Some(smallest) = smallest_foreign.as_mut() {
+            *smallest = std::cmp::min(*smallest, new_foreign);
+        } else {
+            *smallest_foreign = Some(new_foreign);
+        }
+    }
+
+    pub fn new(graph: Arc<SPQGraph>, mapping: Arc<IdIdxMapping>, final_node: NodeId) -> Self {
         QueryProcessor {
             graph,
             mapping,
             visited: HashSet::new(),
             queue: BinaryHeap::new(),
             smallest_foreign: None,
+            final_node,
         }
     }
 
@@ -51,13 +66,12 @@ impl QueryProcessor {
     pub async fn apply_update(
         &mut self,
         inbound: &mut tonic::codec::Streaming<RequestDjikstra>,
+        smallest_foreign: Option<ShortestPathLen>,
     ) -> Result<(), Status> {
-        self.smallest_foreign = None;
+        self.smallest_foreign = smallest_foreign;
 
         while let Some(message) = inbound.message().await? {
-            use crate::worker_service::worker::request_djikstra::MessageType::{
-                NewMyEl, QueryId as ProtoQueryId, SmallestForeignEl,
-            };
+            use request_djikstra::MessageType::{NewMyEl, QueryData};
 
             match message.message_type {
                 Some(NewMyEl(element)) => {
@@ -70,13 +84,10 @@ impl QueryProcessor {
                         });
                     }
                 }
-                Some(SmallestForeignEl(foreign)) => {
-                    self.smallest_foreign = Some(foreign.shortest_path_len);
-                }
-                Some(ProtoQueryId(id)) => {
-                    return Err(Status::invalid_argument(format!(
-                        "Duplicated QueryId {id} in the middle of the stream"
-                    )))
+                Some(QueryData(_)) => {
+                    return Err(Status::invalid_argument(
+                        "Duplicated QueryData in the middle of the stream",
+                    ));
                 }
                 None => break,
             }
@@ -85,31 +96,101 @@ impl QueryProcessor {
         Ok(())
     }
 
+    fn check_for_success(
+        &self,
+        node_id: NodeId,
+        shortest: ShortestPathLen,
+    ) -> Option<Vec<ResponseDjikstra>> {
+        if self.final_node == node_id {
+            use response_djikstra::MessageType::Success as SuccessVariant;
+            use response_djikstra::Success;
+
+            Some(vec![ResponseDjikstra {
+                message_type: Some(SuccessVariant(Success {
+                    node_id,
+                    shortest_path_len: shortest,
+                })),
+            }])
+        } else {
+            None
+        }
+    }
+
     // To be executed on the blocking thread
-    pub fn djikstra_step(self) -> Result<(Self, Vec<ResponseDjikstra>), Status> {
-        // TODO
-        Ok((self, Vec::new()))
+    pub fn djikstra_step(mut self) -> Result<(Self, Vec<ResponseDjikstra>), Status> {
+        let mut responses = Vec::<ResponseDjikstra>::new();
 
-        /*
-        let responses = Vec::<ResponseDjikstra>::new();
+        // We consumed all elements from our graph fragment? Time to stop the query.
+        while let Some(node) = self.queue.peek() {
+            // Smallest element does not belong to this worker? Time to stop the query.
+            if let Some(smf) = self.smallest_foreign {
+                if smf < node.shortest {
+                    use response_djikstra::{MessageType::SmallestMyEl, SmallestMyElement};
 
-        while Some(node) = self.queue.peek() {
-            if let Some(smallest_foreign) = self.smallest_foreign {
-                if smallest_foreign < node.sp_len {
+                    responses.push(ResponseDjikstra {
+                        message_type: Some(SmallestMyEl(SmallestMyElement {
+                            shortest_path_len: node.shortest,
+                        })),
+                    });
+
                     break;
                 }
             }
 
-            for node in self.graph.edges(node.ix.into()) {
-                let next_element = &graph[edge.target()];
+            let node = self.queue.pop().unwrap();
 
-                if self.visited.replace(next_element).is_some() {
-                    continue;
+            for edge in self.graph.edges(node.idx) {
+                match edge.to {
+                    NodePointer::Foreign(new_node_id, worker_id) => {
+                        // Already visited.
+                        if self.visited.replace(new_node_id).is_some() {
+                            continue;
+                        }
+
+                        let new_shortest = node.shortest + edge.weight;
+
+                        // Maybe we found the final node?
+                        if let Some(success) = self.check_for_success(new_node_id, new_shortest) {
+                            return Ok((self, success));
+                        }
+
+                        use response_djikstra::{MessageType::NewForeignEl, NewForeignElement};
+
+                        // New foreign element found. Let's handle it.
+                        responses.push(ResponseDjikstra {
+                            message_type: Some(NewForeignEl(NewForeignElement {
+                                node_id: new_node_id,
+                                worker_id,
+                                shortest_path_len: new_shortest,
+                            })),
+                        });
+
+                        Self::update_smallest_foreign(&mut self.smallest_foreign, new_shortest);
+                    }
+                    NodePointer::Domestic(new_node_idx) => {
+                        let new_node = self.graph.get_node(new_node_idx);
+
+                        // Already visited.
+                        if self.visited.replace(new_node.id).is_some() {
+                            continue;
+                        }
+
+                        let new_shortest = node.shortest + edge.weight;
+
+                        // Maybe we found the final node?
+                        if let Some(success) = self.check_for_success(new_node.id, new_shortest) {
+                            return Ok((self, success));
+                        }
+
+                        self.queue.push(QueueElement {
+                            idx: new_node_idx,
+                            shortest: new_shortest,
+                        });
+                    }
                 }
-
-                let next_sp_len = edge.weight() + node.sp_len;
             }
         }
-        */
+
+        Ok((self, responses))
     }
 }

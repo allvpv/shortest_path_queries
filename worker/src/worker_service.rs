@@ -16,6 +16,8 @@ use crate::graph_store::{IdIdxMapping, SPQGraph};
 use crate::query_processor::{QueryId, QueryProcessor};
 use crate::ErrorCollection;
 
+use crate::worker_service::worker::request_djikstra::QueryData;
+
 #[derive(Debug)]
 enum QueryProcessorHolder {
     Busy, // The query is pending, QueryProcessor was moved to blocking thread
@@ -40,34 +42,41 @@ impl WorkerService {
         }
     }
 
-    fn get_query_processor(&self, query_id: QueryId) -> Result<QueryProcessor, Status> {
+    fn get_query_processor(&self, query_id: QueryId) -> Result<Option<QueryProcessor>, Status> {
         use std::collections::hash_map::Entry::{Occupied, Vacant};
 
-        let processor = {
-            let mut queries = self
-                .queries
-                .lock()
-                .map_err(ErrorCollection::locking_mutex)?;
+        let mut queries = self
+            .queries
+            .lock()
+            .map_err(ErrorCollection::locking_mutex)?;
 
-            match queries.entry(query_id) {
-                Vacant(entry) => {
-                    // No QueryProcessor for this query_id was created. Create new one and put
-                    // 'Busy' into holder (as we are going to use the it now)
-                    entry.insert(QueryProcessorHolder::Busy);
-                    QueryProcessor::new(Arc::clone(&self.graph), Arc::clone(&self.mapping))
-                }
-                Occupied(mut entry) => {
-                    // QueryProcessor for this query_id was already created.
-                    match entry.insert(QueryProcessorHolder::Busy) {
-                        QueryProcessorHolder::Busy => {
-                            // If it is busy, than there is error in Executer; new request for this
-                            // query came, before previous was finished.
-                            return Err(ErrorCollection::duplicated_request_for_query());
-                        }
-                        QueryProcessorHolder::Ready(processor) => processor,
-                    }
+        match queries.entry(query_id) {
+            Vacant(entry) => {
+                // No QueryProcessor for this query_id was created, but we will create one
+                // soon. Insert Busy into holder and return None.
+                entry.insert(QueryProcessorHolder::Busy);
+                Ok(None)
+            }
+            Occupied(mut entry) => {
+                // QueryProcessor for this query_id was already created.
+                match entry.insert(QueryProcessorHolder::Busy) {
+                    // If it is busy, than there is error in Executer; new request for this
+                    // query came, before previous was finished.
+                    QueryProcessorHolder::Busy => Err(ErrorCollection::duplicated_request()),
+                    QueryProcessorHolder::Ready(processor) => Ok(Some(processor)),
                 }
             }
+        }
+    }
+
+    fn get_or_create_query_processor(&self, data: &QueryData) -> Result<QueryProcessor, Status> {
+        let processor = match self.get_query_processor(data.query_id)? {
+            None => {
+                let graph = Arc::clone(&self.graph);
+                let mapping = Arc::clone(&self.mapping);
+                QueryProcessor::new(graph, mapping, data.final_node_id)
+            }
+            Some(processor) => processor,
         };
 
         Ok(processor)
@@ -113,15 +122,20 @@ impl Worker for WorkerService {
         let mut inbound = request.into_inner();
         let next_message = inbound.message().await?.and_then(|r| r.message_type);
 
-        use crate::worker_service::worker::request_djikstra::MessageType::QueryId as ProtoQueryId;
+        use crate::worker_service::worker::request_djikstra::MessageType::QueryData;
 
-        let query_id: QueryId = match next_message {
-            Some(ProtoQueryId(id)) => id,
-            _ => return Err(ErrorCollection::wrong_first_message()),
+        let query_data = {
+            if let Some(QueryData(data)) = next_message {
+                data
+            } else {
+                return Err(ErrorCollection::wrong_first_message());
+            }
         };
 
-        let mut query_processor = self.get_query_processor(query_id)?;
-        query_processor.apply_update(&mut inbound).await?;
+        let mut query_processor = self.get_or_create_query_processor(&query_data)?;
+        query_processor
+            .apply_update(&mut inbound, query_data.smallest_foreign_element)
+            .await?;
 
         // Move the processor in and out the task to satisfy borrow checker
         let (query_processor, result_vec) =
@@ -129,7 +143,7 @@ impl Worker for WorkerService {
                 .await
                 .expect("QueryProcessor djikstra_step task panicked")?;
 
-        self.put_query_processor(query_id, query_processor)?;
+        self.put_query_processor(query_data.query_id, query_processor)?;
         let result_iter = result_vec.into_iter().map(Ok);
         let output = futures::stream::iter(result_iter);
 
@@ -146,7 +160,7 @@ impl ErrorCollection {
         Status::internal(format!("Internal error while locking mutex: {e}"))
     }
 
-    fn duplicated_request_for_query() -> Status {
+    fn duplicated_request() -> Status {
         Status::invalid_argument(
             "Error. Executer requested UpdateDjikstra, while another \
              UpdateDjikstra on this query was already pending",
