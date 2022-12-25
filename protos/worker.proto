@@ -20,20 +20,19 @@ message RequestDjikstra {
     message QueryData {
         uint32 query_id = 1;
         uint64 final_node_id = 2;
-        optional uint64 smallest_foreign_element = 3;
+        optional uint64 smallest_foreign_node = 3;
     }
 
-    message NewMyElement {
+    message NewDomesticNode {
         uint64 node_id = 1;
         uint64 shortest_path_len = 2;
     }
 
-    // First message in the stream must be `query_data`. Message `my_new_el` may
-    // appear multiple times in the stream. Last message must be
-    // `smallest_foreign`.
+    // First message in the stream must be `query_data`. Message
+    // `new_domestic_node` may appear multiple times in the stream.
     oneof MessageType {
         QueryData query_data = 1;
-        NewMyElement new_my_el = 2;
+        NewDomesticNode new_domestic_node = 2;
     }
 }
 
@@ -43,13 +42,13 @@ message ResponseDjikstra {
         uint64 shortest_path_len = 2;
     }
 
-    message NewForeignElement {
+    message NewForeignNode {
         uint64 node_id = 1;
         uint32 worker_id = 2;
         uint64 shortest_path_len = 3;
     }
 
-    message SmallestMyElement {
+    message SmallestDomesticNode {
         uint64 shortest_path_len = 1;
     }
 
@@ -58,8 +57,8 @@ message ResponseDjikstra {
     // and last message must be `smallest_my_el`.
     oneof MessageType {
         Success success = 1;
-        NewForeignElement new_foreign_el = 2;
-        SmallestMyElement smallest_my_el = 3;
+        NewForeignNode new_foreign_node = 2;
+        SmallestDomesticNode smallest_domestic_node = 3;
     }
 }
 

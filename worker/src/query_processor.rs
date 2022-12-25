@@ -71,16 +71,16 @@ impl QueryProcessor {
         self.smallest_foreign = smallest_foreign;
 
         while let Some(message) = inbound.message().await? {
-            use request_djikstra::MessageType::{NewMyEl, QueryData};
+            use request_djikstra::MessageType::{NewDomesticNode, QueryData};
 
             match message.message_type {
-                Some(NewMyEl(element)) => {
-                    let not_visited = self.visited.replace(element.node_id).is_none();
+                Some(NewDomesticNode(node)) => {
+                    let not_visited = self.visited.replace(node.node_id).is_none();
 
                     if not_visited {
                         self.queue.push(QueueElement {
-                            idx: self.mapping.get_mapping(element.node_id)?,
-                            shortest: element.shortest_path_len,
+                            idx: self.mapping.get_mapping(node.node_id)?,
+                            shortest: node.shortest_path_len,
                         });
                     }
                 }
@@ -120,15 +120,17 @@ impl QueryProcessor {
     pub fn djikstra_step(mut self) -> Result<(Self, Vec<ResponseDjikstra>), Status> {
         let mut responses = Vec::<ResponseDjikstra>::new();
 
-        // We consumed all elements from our graph fragment? Time to stop the query.
+        // We consumed all nodes from our graph fragment? Time to stop the query.
         while let Some(node) = self.queue.peek() {
-            // Smallest element does not belong to this worker? Time to stop the query.
+            // Smallest node does not belong to this worker? Time to stop the query.
             if let Some(smf) = self.smallest_foreign {
                 if smf < node.shortest {
-                    use response_djikstra::{MessageType::SmallestMyEl, SmallestMyElement};
+                    use response_djikstra::{
+                        MessageType::SmallestDomesticNode as Variant, SmallestDomesticNode,
+                    };
 
                     responses.push(ResponseDjikstra {
-                        message_type: Some(SmallestMyEl(SmallestMyElement {
+                        message_type: Some(Variant(SmallestDomesticNode {
                             shortest_path_len: node.shortest,
                         })),
                     });
@@ -154,11 +156,13 @@ impl QueryProcessor {
                             return Ok((self, success));
                         }
 
-                        use response_djikstra::{MessageType::NewForeignEl, NewForeignElement};
+                        use response_djikstra::{
+                            MessageType::NewForeignNode as Variant, NewForeignNode,
+                        };
 
-                        // New foreign element found. Let's handle it.
+                        // New foreign node visited.
                         responses.push(ResponseDjikstra {
-                            message_type: Some(NewForeignEl(NewForeignElement {
+                            message_type: Some(Variant(NewForeignNode {
                                 node_id: new_node_id,
                                 worker_id,
                                 shortest_path_len: new_shortest,

@@ -134,7 +134,7 @@ impl Worker for WorkerService {
 
         let mut query_processor = self.get_or_create_query_processor(&query_data)?;
         query_processor
-            .apply_update(&mut inbound, query_data.smallest_foreign_element)
+            .apply_update(&mut inbound, query_data.smallest_foreign_node)
             .await?;
 
         // Move the processor in and out the task to satisfy borrow checker
