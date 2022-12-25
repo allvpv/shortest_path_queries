@@ -37,7 +37,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn async_main(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     use crate::graph_receiver::manager::manager_service_client::ManagerServiceClient;
-    let client = ManagerServiceClient::connect(args.manager_addr).await?;
+    let client = ManagerServiceClient::connect(args.manager_addr)
+        .await
+        .map_err(|e| format!("Cannot connect to the manager: {:?}", e))?;
+
     let mut receiver = GraphReceiver::new(client).await?;
 
     println!("Worker id: {}", receiver.worker_id);
@@ -49,7 +52,11 @@ async fn async_main(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let listening_addr = match args.listening_addr.parse() {
         Ok(addr) => addr,
         Err(err) => {
-            return Err(format!("Cannot parse address `{}`: {err}", args.listening_addr).into())
+            return Err(format!(
+                "Cannot parse listening address `{}`: {err}",
+                args.listening_addr
+            )
+            .into())
         }
     };
 
