@@ -1,6 +1,4 @@
-use std::collections::HashMap;
 use std::pin::Pin;
-use std::sync::{Arc, Mutex};
 
 use futures::stream::Stream;
 use tonic::{Request, Response, Status};
@@ -9,92 +7,30 @@ use generated::worker::worker_server::Worker;
 use generated::worker::{IsPresent, NodeId as NodeIdProto, RequestDjikstra, ResponseDjikstra};
 
 use crate::graph_store::{IdIdxMapping, SPQGraph};
-use crate::query_processor::{QueryId, QueryProcessor};
+use crate::proto_helpers;
+use crate::query_processor::QueryProcessor;
+use crate::query_processor::StepResult::{Finished, Remaining};
+use crate::query_processor_holder::QueryProcessorHolder;
 use crate::ErrorCollection;
 
-use generated::worker::request_djikstra::QueryData;
-
-#[derive(Debug)]
-enum QueryProcessorHolder {
-    Busy, // The query is pending, QueryProcessor was moved to blocking thread
-    Ready(QueryProcessor),
-}
-
-type QueryIdProcessorMap = HashMap<QueryId, QueryProcessorHolder>;
+use generated::worker::request_djikstra;
 
 #[derive(Debug)]
 pub struct WorkerService {
-    graph: Arc<SPQGraph>,
-    mapping: Arc<IdIdxMapping>,
-    queries: Mutex<QueryIdProcessorMap>,
+    processors: QueryProcessorHolder,
 }
 
 impl WorkerService {
     pub fn new(graph: SPQGraph, mapping: IdIdxMapping) -> Self {
         WorkerService {
-            graph: Arc::new(graph),
-            mapping: Arc::new(mapping),
-            queries: Mutex::new(QueryIdProcessorMap::new()),
+            processors: QueryProcessorHolder::new(graph, mapping),
         }
-    }
-
-    fn get_query_processor(&self, query_id: QueryId) -> Result<Option<QueryProcessor>, Status> {
-        use std::collections::hash_map::Entry::{Occupied, Vacant};
-
-        let mut queries = self
-            .queries
-            .lock()
-            .map_err(ErrorCollection::locking_mutex)?;
-
-        match queries.entry(query_id) {
-            Vacant(entry) => {
-                // No QueryProcessor for this query_id was created, but we will create one
-                // soon. Insert Busy into holder and return None.
-                entry.insert(QueryProcessorHolder::Busy);
-                Ok(None)
-            }
-            Occupied(mut entry) => {
-                // QueryProcessor for this query_id was already created.
-                match entry.insert(QueryProcessorHolder::Busy) {
-                    // If it is busy, than there is error in Executer; new request for this
-                    // query came, before previous was finished.
-                    QueryProcessorHolder::Busy => Err(ErrorCollection::duplicated_request()),
-                    QueryProcessorHolder::Ready(processor) => Ok(Some(processor)),
-                }
-            }
-        }
-    }
-
-    fn get_or_create_query_processor(&self, data: &QueryData) -> Result<QueryProcessor, Status> {
-        let processor = match self.get_query_processor(data.query_id)? {
-            None => {
-                let graph = Arc::clone(&self.graph);
-                let mapping = Arc::clone(&self.mapping);
-                QueryProcessor::new(graph, mapping, data.final_node_id)
-            }
-            Some(processor) => processor,
-        };
-
-        Ok(processor)
-    }
-
-    fn put_query_processor(
-        &self,
-        query_id: QueryId,
-        query_processor: QueryProcessor,
-    ) -> Result<(), Status> {
-        let mut queries = self
-            .queries
-            .lock()
-            .map_err(ErrorCollection::locking_mutex)?;
-
-        let holder = queries.get_mut(&query_id).unwrap();
-        debug_assert!(matches!(holder, QueryProcessorHolder::Busy));
-        *holder = QueryProcessorHolder::Ready(query_processor);
-
-        Ok(())
     }
 }
+
+type RequestDjikstraStream = tonic::Streaming<RequestDjikstra>;
+type ResponseDjikstraStream =
+    Pin<Box<dyn Stream<Item = Result<ResponseDjikstra, Status>> + Send + 'static>>;
 
 #[tonic::async_trait]
 impl Worker for WorkerService {
@@ -103,22 +39,21 @@ impl Worker for WorkerService {
         request: Request<NodeIdProto>,
     ) -> Result<Response<IsPresent>, Status> {
         let node_id = request.get_ref().node_id;
-        let present = self.mapping.contains_key(&node_id);
+        let present = self.processors.get_mapping().contains_key(&node_id);
 
         Ok(Response::new(IsPresent { present }))
     }
 
-    type UpdateDjikstraStream =
-        Pin<Box<dyn Stream<Item = Result<ResponseDjikstra, Status>> + Send + 'static>>;
+    type UpdateDjikstraStream = ResponseDjikstraStream;
 
     async fn update_djikstra(
         &self,
-        request: Request<tonic::Streaming<RequestDjikstra>>,
-    ) -> Result<Response<Self::UpdateDjikstraStream>, Status> {
+        request: Request<RequestDjikstraStream>,
+    ) -> Result<Response<ResponseDjikstraStream>, Status> {
         let mut inbound = request.into_inner();
         let next_message = inbound.message().await?.and_then(|r| r.message_type);
 
-        use generated::worker::request_djikstra::MessageType::QueryData;
+        use request_djikstra::MessageType::QueryData;
 
         let query_data = {
             if let Some(QueryData(data)) = next_message {
@@ -128,22 +63,56 @@ impl Worker for WorkerService {
             }
         };
 
-        let mut query_processor = self.get_or_create_query_processor(&query_data)?;
-        query_processor
-            .apply_update(&mut inbound, query_data.smallest_foreign_node)
-            .await?;
+        let mut processor = self
+            .processors
+            .get_for_query(&query_data)
+            .map_err(ErrorCollection::duplicated_request)?;
 
-        // Move the processor in and out the task to satisfy borrow checker
-        let (query_processor, result_vec) =
-            tokio::task::spawn_blocking(move || query_processor.djikstra_step())
-                .await
-                .expect("QueryProcessor djikstra_step task panicked")?;
+        processor.update_smallest_foreign(query_data.smallest_foreign_node);
 
-        self.put_query_processor(query_data.query_id, query_processor)?;
-        let result_iter = result_vec.into_iter().map(Ok);
-        let output = futures::stream::iter(result_iter);
+        Self::apply_update(&mut processor, &mut inbound).await?;
 
-        Ok(Response::new(Box::pin(output)))
+        // Move the processor in and out the task to satisfy the borrow checker
+        let (processor, result) = tokio::task::spawn_blocking(move || processor.djikstra_step())
+            .await
+            .expect("QueryProcessor djikstra_step task panicked")?;
+
+        let output: ResponseDjikstraStream = match result {
+            Finished(node_id, shortest) => {
+                self.processors.forget_query(processor)?;
+                let message = proto_helpers::success(node_id, shortest);
+                Box::pin(futures::stream::once(async { Ok(message) }))
+            }
+            Remaining(responses) => {
+                self.processors.put_back_query(processor)?;
+                let messages = responses.into_iter().map(Ok);
+                Box::pin(futures::stream::iter(messages))
+            }
+        };
+
+        Ok(Response::new(output))
+    }
+}
+
+impl WorkerService {
+    // Applies updates for this query
+    async fn apply_update(
+        processor: &mut QueryProcessor,
+        inbound: &mut RequestDjikstraStream,
+    ) -> Result<(), Status> {
+        while let Some(message) = inbound.message().await? {
+            use request_djikstra::MessageType::{NewDomesticNode, QueryData};
+
+            match message.message_type {
+                Some(NewDomesticNode(node)) => {
+                    processor.add_new_domestic_node(node.node_id, node.shortest_path_len)?;
+                }
+                Some(QueryData(_)) => return Err(ErrorCollection::duplicated_query_data()),
+                None => break,
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -152,14 +121,14 @@ impl ErrorCollection {
         Status::invalid_argument("First message in UpdateDjikstra stream must be query_id")
     }
 
-    fn locking_mutex(e: impl std::error::Error) -> Status {
-        Status::internal(format!("Internal error while locking mutex: {e}"))
+    fn duplicated_request(e: impl std::error::Error) -> Status {
+        Status::invalid_argument(format!(
+            "Executer requested UpdateDjikstra, while another UpdateDjikstra on this \
+                    query was already pending: {e}"
+        ))
     }
 
-    fn duplicated_request() -> Status {
-        Status::invalid_argument(
-            "Error. Executer requested UpdateDjikstra, while another \
-             UpdateDjikstra on this query was already pending",
-        )
+    fn duplicated_query_data() -> Status {
+        Status::invalid_argument("Duplicated QueryData in the middle of the stream")
     }
 }

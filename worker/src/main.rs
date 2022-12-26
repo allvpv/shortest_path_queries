@@ -1,6 +1,8 @@
 mod graph_receiver;
 mod graph_store;
+mod proto_helpers;
 mod query_processor;
+mod query_processor_holder;
 mod worker_service;
 
 use std::string::String;

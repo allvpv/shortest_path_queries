@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_clippy")
 
 rust_binary(
     name = "worker",
@@ -13,4 +13,11 @@ rust_binary(
         "@worker_crates//:tokio",
         "@worker_crates//:clap",
     ],
+)
+
+
+rust_clippy(
+    name = "worker_clippy",
+    testonly = True,
+    deps = [":worker"],
 )

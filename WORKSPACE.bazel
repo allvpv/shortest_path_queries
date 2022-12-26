@@ -76,6 +76,8 @@ crates_repository(
             version = "4.0",
             features = ["derive"],
         ),
+        "tracing": crate.spec(version = "0.1"),
+        "tracing-subscriber": crate.spec(version = "0.3"),
     },
     splicing_config = splicing_config(
         resolver_version = "2",
