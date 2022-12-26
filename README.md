@@ -1,26 +1,19 @@
 # Graph Worker
 
-* `protos/`
+* `protos/` -- API
 
-  Our API.
-
-* `worker/`
-
-  This is the working process running on a single node
+* `worker/` -- Worker node process
 
   ```shell
   bazel run //worker
   ```
 
-* `partitioner/`
-
-   Partitioner/manager node.
+* `partitioner/` -- Partitioner/manager node process
 
     ```shell
-    bazel run //partitioner -- --help
+    bazel run //partitioner 
     ```
 
-* `executer/`
-   Executer node (to be done).
+* `executer/` -- Executer node process (TBD)
 
 
