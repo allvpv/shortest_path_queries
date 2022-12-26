@@ -1,0 +1,16 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+rust_binary(
+    name = "worker",
+    srcs = glob(["src/*.rs"]),
+    edition = "2021",
+    deps = [
+        "//protos/generated_rust:generated",
+        "@worker_crates//:tonic",
+        "@worker_crates//:prost",
+        "@worker_crates//:futures",
+        "@worker_crates//:num_cpus",
+        "@worker_crates//:tokio",
+        "@worker_crates//:clap",
+    ],
+)

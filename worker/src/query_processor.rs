@@ -6,8 +6,8 @@ use tonic::Status;
 
 use crate::graph_store::{IdIdxMapper, IdIdxMapping, NodeId, NodeIdx, SPQGraph, ShortestPathLen};
 use crate::graph_store::{NodePointer, SomeGraphMethods, VisitedMap};
-use crate::worker_service::worker::{request_djikstra, response_djikstra};
-use crate::worker_service::worker::{RequestDjikstra, ResponseDjikstra};
+use generated::worker::{request_djikstra, response_djikstra};
+use generated::worker::{RequestDjikstra, ResponseDjikstra};
 
 pub type QueryId = u32;
 

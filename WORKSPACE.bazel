@@ -4,13 +4,6 @@ load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 #
 # Protocol Buffers
 #
-http_archive(
-    name = "com_google_protobuf",
-    sha256 = "22fdaf641b31655d4b2297f9981fa5203b2866f8332d3c6333f6b0107bb320de",
-    strip_prefix = "protobuf-21.12",
-    urls = ["https://github.com/protocolbuffers/protobuf/archive/v21.12.tar.gz"],
-)
-
 #
 # gRPC
 #
@@ -39,27 +32,60 @@ load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 grpc_extra_deps()
 
 #
-# Abseil
+# Rust
 #
-git_repository(
-    name = "absl",
-    remote = "https://github.com/abseil/abseil-cpp.git",
-    commit = "2468b189eec992ff810f88d7dfbdc5c4dd9094ea",
-)
-
-#
-# Hedron's Compile Commands Extractor for Bazel
-# https://github.com/hedronvision/bazel-compile-commands-extractor
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 http_archive(
-    name = "hedron_compile_commands",
-
-    # Replace the commit hash in both places (below) with the latest, rather than using the stale one here.
-    # Even better, set up Renovate and let it do the work for you (see "Suggestion: Updates" in the README).
-    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/ed994039a951b736091776d677f324b3903ef939.tar.gz",
-    strip_prefix = "bazel-compile-commands-extractor-ed994039a951b736091776d677f324b3903ef939",
-    # When you first run this tool, it'll recommend a sha256 hash to put here with a message like: "DEBUG: Rule 'hedron_compile_commands' indicated that a canonical reproducible form can be obtained by modifying arguments sha256 = ..."
+    name = "rules_rust",
+    sha256 = "5c2b6745236f8ce547f82eeacbbcc81d736734cc8bd92e60d3e3cdfa6e167bb5",
+    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.15.0/rules_rust-v0.15.0.tar.gz"],
 )
-load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
-hedron_compile_commands_setup()
 
+
+load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
+rules_rust_dependencies()
+
+rust_register_toolchains(
+    edition="2021",
+)
+
+load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
+
+crate_universe_dependencies(bootstrap = True)
+
+load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository", "splicing_config")
+
+crates_repository(
+    name = "worker_crates",
+    cargo_lockfile = "//worker:Cargo.Bazel.lock",
+    # `generator` is not necessary in official releases.
+    # See load satement for `cargo_bazel_bootstrap`.
+    generator = "@cargo_bazel_bootstrap//:cargo-bazel",
+    lockfile = "//worker:cargo-bazel-lock.json",
+    packages = {
+        "tonic": crate.spec(version = "0.8"),
+        "prost": crate.spec(version = "0.11"),
+        "num_cpus": crate.spec(version = "1.15"),
+        "tonic-build": crate.spec(version = "0.8"),
+        "futures": crate.spec(version = "0.3"),
+        "tokio": crate.spec(
+            version = "1.23.0",
+            features = ["rt-multi-thread", "macros", "sync", "time"],
+        ),
+        "clap": crate.spec(
+            version = "4.0",
+            features = ["derive"],
+        ),
+    },
+    splicing_config = splicing_config(
+        resolver_version = "2",
+    ),
+)
+
+load(
+    "@worker_crates//:defs.bzl",
+    worker_crate_repositories = "crate_repositories",
+)
+
+worker_crate_repositories()
 

@@ -5,31 +5,26 @@ load("@rules_proto_grpc//python:defs.bzl", "python_grpc_library")
 package(default_visibility = ["//visibility:public"])
 
 proto_library(
-    name = "worker_proto",
+    name = "worker",
     srcs = [":worker.proto"],
     visibility = ["//visibility:public"],
 )
 
 proto_library(
-    name = "manager_proto",
+    name = "manager",
     srcs = [":manager.proto"],
     visibility = ["//visibility:public"],
     deps = ["@com_google_protobuf//:empty_proto"],
 )
 
-cpp_grpc_library(
-    name = "worker_cpp_grpc",
-    protos = ["//protos:worker_proto"],
-    visibility = ["//visibility:public"],
-)
-
-cpp_grpc_library(
-    name = "manager_cpp_grpc",
-    protos = ["//protos:manager_proto"],
+python_grpc_library(
+    name = "manager_py",
+    protos = [":manager"],
     visibility = ["//visibility:public"],
 )
 
 python_grpc_library(
-    name = "manager_py_grpc",
-    protos = ["//protos:manager_proto"],
+    name = "worker_py",
+    protos = [":worker"],
+    visibility = ["//visibility:public"],
 )

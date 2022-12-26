@@ -1,12 +1,8 @@
-pub mod manager {
-    tonic::include_proto!("manager");
-}
-
 use tonic::transport::Channel;
 use tonic::{Request, Status};
 
-use manager::graph_piece;
-use manager::manager_service_client::ManagerServiceClient;
+use generated::manager::graph_piece;
+use generated::manager::manager_service_client::ManagerServiceClient;
 
 use crate::graph_store;
 

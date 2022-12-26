@@ -1,0 +1,32 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
+
+cargo_build_script(
+    name = "protogen",
+    srcs = ["gen.rs"],
+    build_script_env = {
+        "PROTOC":  "$(execpath @com_google_protobuf//:protoc)",
+    },
+    data = [
+      "//protos:worker",
+      "//protos:manager",
+      "@com_google_protobuf//:protoc",
+      "@com_google_protobuf//:empty_proto",
+    ],
+    deps = [
+      "@worker_crates//:tonic-build",
+    ],
+)
+
+# Rust proto lib.
+rust_library(
+    name = "generated",
+    srcs = ["generated.rs"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":protogen",
+        "@worker_crates//:tonic",
+        "@worker_crates//:prost",
+    ],
+)
+

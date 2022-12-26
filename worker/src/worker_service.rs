@@ -1,7 +1,3 @@
-pub mod worker {
-    tonic::include_proto!("worker");
-}
-
 use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
@@ -9,14 +5,14 @@ use std::sync::{Arc, Mutex};
 use futures::stream::Stream;
 use tonic::{Request, Response, Status};
 
-use worker::worker_server::Worker;
-use worker::{IsPresent, NodeId as NodeIdProto, RequestDjikstra, ResponseDjikstra};
+use generated::worker::worker_server::Worker;
+use generated::worker::{IsPresent, NodeId as NodeIdProto, RequestDjikstra, ResponseDjikstra};
 
 use crate::graph_store::{IdIdxMapping, SPQGraph};
 use crate::query_processor::{QueryId, QueryProcessor};
 use crate::ErrorCollection;
 
-use crate::worker_service::worker::request_djikstra::QueryData;
+use generated::worker::request_djikstra::QueryData;
 
 #[derive(Debug)]
 enum QueryProcessorHolder {
@@ -122,7 +118,7 @@ impl Worker for WorkerService {
         let mut inbound = request.into_inner();
         let next_message = inbound.message().await?.and_then(|r| r.message_type);
 
-        use crate::worker_service::worker::request_djikstra::MessageType::QueryData;
+        use generated::worker::request_djikstra::MessageType::QueryData;
 
         let query_data = {
             if let Some(QueryData(data)) = next_message {

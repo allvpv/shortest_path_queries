@@ -9,8 +9,7 @@
   This is the working process running on a single node
 
   ```shell
-  cd worker/
-  cargo run -- --help
+  bazel run //worker
   ```
 
 * `partitioner/`
@@ -18,7 +17,7 @@
    Partitioner/manager node.
 
     ```shell
-    bazel run //partitioner:partitioner -- --help
+    bazel run //partitioner -- --help
     ```
 
 * `executer/`

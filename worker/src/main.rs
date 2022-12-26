@@ -9,7 +9,6 @@ use clap::Parser;
 use tonic::transport::Server;
 
 use crate::graph_receiver::GraphReceiver;
-use crate::worker_service::worker::worker_server::WorkerServer;
 use crate::worker_service::WorkerService;
 
 #[derive(Parser)]
@@ -36,7 +35,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn async_main(args: Args) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::graph_receiver::manager::manager_service_client::ManagerServiceClient;
+    use generated::manager::manager_service_client::ManagerServiceClient;
+    use generated::worker::worker_server::WorkerServer;
+
     let client = ManagerServiceClient::connect(args.manager_addr)
         .await
         .map_err(|e| format!("Cannot connect to the manager: {:?}", e))?;
