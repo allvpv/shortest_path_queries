@@ -3,7 +3,7 @@ import gzip
 import grpc
 
 from parsers.open_street_map import OpenStreetMapParser
-from partitioners.grid import GridPartitioner
+from partitioners.grid import GridPartitioner, QuantilePartitioner
 from protos.manager_pb2_grpc import *
 
 def main():
@@ -15,7 +15,8 @@ def main():
     args = parser.parse_args()
 
     parser = OpenStreetMapParser(args.graph)
-    qp = GridPartitioner()
+    #qp = GridPartitioner()
+    qp = QuantilePartitioner()
     partitions = qp.partition(parser, n_partitions=args.n_partitions)
 
     print(partitions)
