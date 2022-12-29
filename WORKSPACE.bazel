@@ -47,6 +47,7 @@ rules_rust_dependencies()
 
 rust_register_toolchains(
     edition="2021",
+    version="1.66.0"
 )
 
 load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
@@ -90,4 +91,8 @@ load(
 )
 
 worker_crate_repositories()
+
+load("@rules_rust//tools/rust_analyzer:deps.bzl", "rust_analyzer_dependencies")
+
+rust_analyzer_dependencies()
 

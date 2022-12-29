@@ -15,7 +15,6 @@ rust_binary(
     ],
 )
 
-
 rust_clippy(
     name = "worker_clippy",
     testonly = True,
