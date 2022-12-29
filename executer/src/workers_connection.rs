@@ -39,7 +39,7 @@ pub fn connect_to_all_workers(
 ) -> impl Future<Output = Result<WorkerList, Error>> {
     use futures::TryFutureExt;
 
-    let workers_connect = addrs.into_iter().enumerate().map(|(i, w)| {
+    let workers_connect = addrs.into_iter().map(|w| {
         WorkerClient::connect(w.address).map_ok(move |channel| Worker {
             id: w.worker_id,
             channel,

@@ -1,23 +1,28 @@
 use crate::executer::{executer_server::Executer, QueryData, QueryFinished};
 use crate::workers_connection::{Worker, WorkerId};
-use futures::stream::{FuturesUnordered, StreamExt, TryStreamExt};
+use futures::stream::{FuturesUnordered, TryStreamExt};
 use futures::TryFutureExt;
 use tonic::{Request, Response, Status};
 
+type NodeId = u64;
+type WorkersSorted = Vec<Worker>;
+
 pub struct ExecuterService {
-    workers: Vec<Worker>,
+    workers: WorkersSorted,
 }
 
-type NodeId = u64;
-
 impl ExecuterService {
-    async fn find_workers(&self, from: NodeId, to: NodeId) -> Result<(WorkerId, WorkerId), Status> {
+    async fn find_workers(
+        workers: &mut WorkersSorted,
+        from: NodeId,
+        to: NodeId,
+    ) -> Result<(WorkerId, WorkerId), Status> {
+
         let message = crate::worker::NodeIds {
             node_from_id: from,
             node_to_id: to,
         };
 
-        let mut workers = self.workers.clone(); // Cloning `Channel` is cheap and unavoidable
         let mut futs = workers
             .iter_mut()
             .map(|worker| {
@@ -69,12 +74,15 @@ impl Executer for ExecuterService {
         req: Request<QueryData>,
     ) -> Result<Response<QueryFinished>, Status> {
 
+         // Cloning `Channel` is cheap (and unavoidable, I guess)
+        let mut workers = self.workers.clone();
+
         let QueryData {
             node_id_from,
             node_id_to,
         } = req.into_inner();
 
-        let (worker_from, worker_to) = self.find_workers(node_id_from, node_id_to).await?;
+        let (first_worker, _) = Self::find_workers(&mut workers, node_id_from, node_id_to).await?;
 
         unimplemented!()
     }

@@ -2,11 +2,11 @@ fn main() {
     tonic_build::configure()
         .compile(
             &[
-                "../GraphWorker/protos/worker.proto",
-                "../GraphWorker/protos/manager.proto",
-                "../GraphWorker/protos/executer.proto",
+                "../protos/worker.proto",
+                "../protos/manager.proto",
+                "../protos/executer.proto",
             ],
-            &["../GraphWorker/protos/"],
+            &["../protos/"],
         )
         .unwrap();
 }
