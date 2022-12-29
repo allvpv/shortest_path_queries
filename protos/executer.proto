@@ -1,0 +1,18 @@
+syntax="proto3";
+
+package executer;
+
+// Interface exported by the executer node and exposed to end user (very simple so far).
+service Executer {
+    rpc ShortestPathQuery(QueryData) returns (QueryFinished);
+}
+
+message QueryData {
+    uint64 node_id_from = 1;
+    uint64 node_id_to = 2;
+}
+
+// TODO: Add backtracing and send the full path back
+message QueryFinished {
+    uint64 shortest_path_len = 1;
+}
