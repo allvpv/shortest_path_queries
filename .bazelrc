@@ -1,1 +1,1 @@
-build --cxxopt='-std=c++2b'
+build --cxxopt=-std=c++14 --cxxopt=-Wno-deprecated-builtins --host_cxxopt=-std=c++14 --host_cxxopt=-Wno-deprecated-builtins
