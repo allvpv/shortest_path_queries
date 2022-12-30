@@ -1,5 +1,6 @@
-mod workers_connection;
 mod executer_service;
+mod query_coordinator;
+mod workers_connection;
 
 pub mod manager {
     tonic::include_proto!("manager");
@@ -14,6 +15,10 @@ pub mod executer {
 }
 
 use clap::Parser;
+use tonic::transport::Server;
+
+use executer::executer_server::ExecuterServer;
+use executer_service::ExecuterService;
 use manager::manager_service_client::ManagerServiceClient;
 
 #[derive(Parser)]
@@ -38,6 +43,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Connecting to workers");
     let workers = workers_connection::connect_to_all_workers(addrs).await?;
+
+    println!("Running the server");
+    let listening_addr = match args.listening_addr.parse() {
+        Ok(addr) => addr,
+        Err(err) => {
+            return Err(format!(
+                "Cannot parse listening address `{}`: {err}",
+                args.listening_addr
+            )
+            .into())
+        }
+    };
+
+    let service = ExecuterService::new(workers);
+    let server = ExecuterServer::new(service);
+
+    Server::builder()
+        .add_service(server)
+        .serve(listening_addr)
+        .await?;
 
     Ok(())
 }
