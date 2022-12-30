@@ -70,7 +70,7 @@ impl QueryCoordinator {
         match self.global_shortest.as_mut() {
             None => self.global_shortest = Some((worker, shortest)),
             Some((worker_, shortest_)) => {
-                if *shortest_ < shortest {
+                if shortest < *shortest_ {
                     *worker_ = worker;
                     *shortest_ = shortest;
                 }
@@ -78,7 +78,7 @@ impl QueryCoordinator {
         }
     }
 
-    fn find_smallest_foreign(&self, current: WorkerIdx) -> Option<ShortestPathLen> {
+    fn find_shortest_foreign(&self, current: WorkerIdx) -> Option<ShortestPathLen> {
         self.workers
             .iter()
             .enumerate()
@@ -160,7 +160,7 @@ impl QueryCoordinator {
         &mut self,
         current: WorkerIdx,
     ) -> AsyncStream<RequestDjikstra, impl Future<Output = ()>> {
-        let smallest_foreign_node = self.find_smallest_foreign(current);
+        let shortest = self.find_shortest_foreign(current);
         let new_nodes = self.workers[current].extract_new_domestic();
         let final_node_id = self.node_id_to;
 
@@ -168,7 +168,7 @@ impl QueryCoordinator {
             yield proto_helpers::pack_query_data(request_djikstra::QueryData {
                 query_id: 0,
                 final_node_id,
-                smallest_foreign_node
+                smallest_foreign_node: shortest
             });
 
             let node_packed = new_nodes.into_iter().map(proto_helpers::pack_new_domestic_node);
