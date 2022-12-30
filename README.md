@@ -1,19 +1,19 @@
-# Graph Worker
+# distributed shortest path queries
 
-* `protos/` -- API
+* `protos/` – API
 
-* `worker/` -- Worker node process
+* `worker/` – Worker node process
 
   ```shell
   bazel run //worker
   ```
 
-* `partitioner/` -- Partitioner/manager node process
+* `partitioner/` – Partitioner/manager node process
 
     ```shell
     bazel run //partitioner 
     ```
 
-* `executer/` -- Executer node process (TBD)
+* `executer/` – Executer node process
 
 
