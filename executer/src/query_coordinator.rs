@@ -55,6 +55,7 @@ impl WorkerExtended {
 
 pub struct QueryCoordinator {
     workers: Vec<WorkerExtended>,
+    query_id: u32,
 
     node_id_from: NodeId,
     node_id_to: NodeId,
@@ -87,13 +88,14 @@ impl QueryCoordinator {
             .min()
     }
 
-    pub async fn new(workers: &[Worker], from: NodeId, to: NodeId) -> Result<Self> {
+    pub async fn new(workers: &[Worker], from: NodeId, to: NodeId, query_id: u32) -> Result<Self> {
         let mut workers_extended: Vec<_> = workers.iter().map(WorkerExtended::from).collect();
 
         let (worker_from, worker_to) = Self::find_workers(&mut workers_extended, from, to).await?;
 
         Ok(QueryCoordinator {
             workers: workers_extended,
+            query_id,
             node_id_from: from,
             node_id_to: to,
             first_worker_idx: worker_from,
@@ -160,15 +162,16 @@ impl QueryCoordinator {
         &mut self,
         current: WorkerIdx,
     ) -> AsyncStream<RequestDjikstra, impl Future<Output = ()>> {
-        let shortest = self.find_shortest_foreign(current);
+        let smallest_foreign_node = self.find_shortest_foreign(current);
         let new_nodes = self.workers[current].extract_new_domestic();
         let final_node_id = self.node_id_to;
+        let query_id = self.query_id;
 
         async_stream::stream! {
             yield proto_helpers::pack_query_data(request_djikstra::QueryData {
-                query_id: 0,
+                query_id,
                 final_node_id,
-                smallest_foreign_node: shortest
+                smallest_foreign_node,
             });
 
             let node_packed = new_nodes.into_iter().map(proto_helpers::pack_new_domestic_node);
