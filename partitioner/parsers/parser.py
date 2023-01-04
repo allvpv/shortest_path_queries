@@ -10,7 +10,7 @@ class GraphParser:
     def get_node_info(self, line: Text) -> Tuple[int, float, float]:
         pass
 
-    def get_partition_nodes(partitions: List[List[Tuple[float]]], partition_ix: int) -> Dict[int, Tuple[float, float]]:
+    def get_partition_nodes(self, partitions: List[List[Tuple[float]]], partition_ix: int) -> Dict[int, Tuple[float, float]]:
         pass
 
     def get_edge_info(self, line: Text) -> Tuple[int, int, float]:

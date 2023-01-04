@@ -37,8 +37,8 @@ class OpenStreetMapParser(GraphParser):
     def parse_way(way_lines):
         tag_regex = re.compile(r'\s*<tag k="(\w+)" v="(.+)"\s*\/>')
         node_regex = re.compile(r'\s*<nd ref="(\d+)"\s*\/>')
-        way_begin = re.compile(r'\s*<way [^\/]*\/>')
-        way_end = re.compile(r'\s*<\/way>')
+        way_begin = re.compile(r'\s*<way [^>]*>\s*')
+        way_end = re.compile(r'\s*<\/way>\s*')
 
         assert way_begin.match(way_lines[0])
         assert way_end.match(way_lines[-1])
@@ -55,7 +55,7 @@ class OpenStreetMapParser(GraphParser):
 
         return node_list, tag_dict
 
-    def get_partition_nodes(partitions: List[List[Tuple[float]]], partition_ix: int) -> Dict[int, Tuple[float, float]]:
+    def get_partition_nodes(self, partitions: List[List[Tuple[float]]], partition_ix: int) -> Dict[int, Tuple[float, float]]:
         partition = partitions[partition_ix]
         x_min, x_max = partition[0]
         y_min, y_max = partition[1]
