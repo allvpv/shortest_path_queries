@@ -1,10 +1,14 @@
 import argparse
+import re
 import gzip
 import grpc
+from concurrent import futures
 
 from parsers.open_street_map import OpenStreetMapParser
 from partitioners.grid import GridPartitioner, QuantilePartitioner
-from protos.manager_pb2_grpc import *
+from partitioners import is_in_partition
+import rpc_servers.manager_pb2_grpc as manager_pb2_grpc
+
 
 def main():
     parser = argparse.ArgumentParser(description='Parse graphs and compute node regions')
@@ -15,22 +19,26 @@ def main():
     args = parser.parse_args()
 
     parser = OpenStreetMapParser(args.graph)
-    #qp = GridPartitioner()
-    qp = QuantilePartitioner()
-    partitions = qp.partition(parser, n_partitions=args.n_partitions)
+    quantile_partitioner = QuantilePartitioner()
+    partitions = quantile_partitioner.partition(parser, n_partitions=args.n_partitions)
 
     print(partitions)
-
-    def is_in_partition(lon, lat, partition):
-        x_min, x_max = partition[0]
-        y_min, y_max = partition[1]
-        return x_min < lon <= x_max and y_min < lat <= y_max
-
     for _, line in parser.get_lines():
         if parser.is_node_line(line):
             node, lat, lon = parser.get_node_info(line)
             partition_ix, partition = next(filter(lambda p: is_in_partition(lon, lat, p[1]), enumerate(partitions)))
             print(f"Node: id={node}, latitude={lat}, longitude={lon}, partition_ix={partition_ix}, partition={partition}")
+
+    # Serve
+    print('Starting the server...')
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    manager_pb2_grpc.add_ManagerServiceServicer_to_server(
+        manager_pb2_grpc.ManagerServiceServicer(partitions, parser), server
+    )
+    server.add_insecure_port('[::]:50051')
+    server.start()
+    server.wait_for_termination()
+
 
 if __name__ == "__main__":
     main()
