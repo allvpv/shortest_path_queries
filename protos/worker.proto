@@ -4,16 +4,18 @@ package worker;
 
 // Interface exported by the worker node.
 service Worker {
-    rpc IsNodePresent(NodeId) returns (IsPresent);
+    rpc AreNodesPresent(NodeIds) returns (ArePresent);
     rpc UpdateDjikstra(stream RequestDjikstra) returns (stream ResponseDjikstra);
 }
 
-message NodeId {
-    uint64 node_id = 1;
+message NodeIds {
+    uint64 node_from_id = 1;
+    uint64 node_to_id = 2;
 }
 
-message IsPresent {
-    bool present = 1;
+message ArePresent {
+    bool node_from_present = 1;
+    bool node_to_present = 2;
 }
 
 message RequestDjikstra {

@@ -26,7 +26,6 @@ message WorkersList {
     repeated WorkerEntry workers = 1;
 }
 
-
 message Node {
     uint64 node_id = 1;
 }
