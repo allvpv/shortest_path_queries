@@ -8,8 +8,8 @@ class OpenStreetMapParser(GraphParser):
         self.graph_path = graph_path
         self.node_regex = re.compile(r'\s<node.*')
         self.id_regex = re.compile(r'id="(\d+)"')
-        self.lat_regex = re.compile(f'lat="([\d\.]+)"')
-        self.lon_regex = re.compile(f'lon="([\d\.]+)"')
+        self.lat_regex = re.compile(r'lat="([\d\.]+)"')
+        self.lon_regex = re.compile(r'lon="([\d\.]+)"')
 
     def get_lines(self) -> Tuple[int, Text]:
         with gzip.open(self.graph_path, "r") as f:
@@ -17,7 +17,7 @@ class OpenStreetMapParser(GraphParser):
                 yield ix, line.decode('utf-8')
 
     def is_node_line(self, line: Text) -> bool:
-        return self.node_regex.match(line) != None
+        return self.node_regex.match(line) is not None
 
     def get_node_info(self, line: Text) -> Tuple[int, float, float]:
         id_match = self.id_regex.search(line)
@@ -57,15 +57,12 @@ class OpenStreetMapParser(GraphParser):
 
     def get_partition_nodes(self, partitions: List[List[Tuple[float]]], partition_ix: int) -> Dict[int, Tuple[float, float]]:
         partition = partitions[partition_ix]
-        x_min, x_max = partition[0]
-        y_min, y_max = partition[1]
         node_cache = {}
         for _, line in self.get_lines():
             if not self.is_node_line(line):
                 continue
             node_id, lat, lon = self.get_node_info(line)
-            node_cache[node_id] = (lat, lon)
+            if OpenStreetMapParser.is_in_partition(lon, lat, partition):
+                node_cache[node_id] = (lat, lon)
 
         return node_cache
-
-
