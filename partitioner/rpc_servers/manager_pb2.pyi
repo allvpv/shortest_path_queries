@@ -38,6 +38,12 @@ class WorkerMetadata(_message.Message):
     worker_id: int
     def __init__(self, worker_id: _Optional[int] = ...) -> None: ...
 
+class WorkerProperties(_message.Message):
+    __slots__ = ["listening_address"]
+    LISTENING_ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    listening_address: str
+    def __init__(self, listening_address: _Optional[str] = ...) -> None: ...
+
 class WorkersList(_message.Message):
     __slots__ = ["workers"]
     class WorkerEntry(_message.Message):

@@ -14,25 +14,27 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rmanager.proto\x12\x07manager\x1a\x1bgoogle/protobuf/empty.proto\"#\n\x0eWorkerMetadata\x12\x11\n\tworker_id\x18\x01 \x01(\r\"s\n\x0bWorkersList\x12\x31\n\x07workers\x18\x01 \x03(\x0b\x32 .manager.WorkersList.WorkerEntry\x1a\x31\n\x0bWorkerEntry\x12\x11\n\tworker_id\x18\x01 \x01(\r\x12\x0f\n\x07\x61\x64\x64ress\x18\x02 \x01(\t\"\x17\n\x04Node\x12\x0f\n\x07node_id\x18\x01 \x01(\x04\"v\n\x04\x45\x64ge\x12\x14\n\x0cnode_from_id\x18\x02 \x01(\x04\x12\x12\n\nnode_to_id\x18\x03 \x01(\x04\x12\x0e\n\x06weight\x18\x04 \x01(\x04\x12\x1e\n\x11node_to_worker_id\x18\x05 \x01(\rH\x00\x88\x01\x01\x42\x14\n\x12_node_to_worker_id\"\\\n\nGraphPiece\x12\x1e\n\x05nodes\x18\x01 \x01(\x0b\x32\r.manager.NodeH\x00\x12\x1e\n\x05\x65\x64ges\x18\x02 \x01(\x0b\x32\r.manager.EdgeH\x00\x42\x0e\n\x0cGraphElement2\xd6\x01\n\x0eManagerService\x12\x41\n\x0eRegisterWorker\x12\x16.google.protobuf.Empty\x1a\x17.manager.WorkerMetadata\x12\x41\n\x10GetGraphFragment\x12\x16.google.protobuf.Empty\x1a\x13.manager.GraphPiece0\x01\x12>\n\x0eGetWorkersList\x12\x16.google.protobuf.Empty\x1a\x14.manager.WorkersListb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rmanager.proto\x12\x07manager\x1a\x1bgoogle/protobuf/empty.proto\"-\n\x10WorkerProperties\x12\x19\n\x11listening_address\x18\x01 \x01(\t\"#\n\x0eWorkerMetadata\x12\x11\n\tworker_id\x18\x01 \x01(\r\"s\n\x0bWorkersList\x12\x31\n\x07workers\x18\x01 \x03(\x0b\x32 .manager.WorkersList.WorkerEntry\x1a\x31\n\x0bWorkerEntry\x12\x11\n\tworker_id\x18\x01 \x01(\r\x12\x0f\n\x07\x61\x64\x64ress\x18\x02 \x01(\t\"\x17\n\x04Node\x12\x0f\n\x07node_id\x18\x01 \x01(\x04\"v\n\x04\x45\x64ge\x12\x14\n\x0cnode_from_id\x18\x02 \x01(\x04\x12\x12\n\nnode_to_id\x18\x03 \x01(\x04\x12\x0e\n\x06weight\x18\x04 \x01(\x04\x12\x1e\n\x11node_to_worker_id\x18\x05 \x01(\rH\x00\x88\x01\x01\x42\x14\n\x12_node_to_worker_id\"\\\n\nGraphPiece\x12\x1e\n\x05nodes\x18\x01 \x01(\x0b\x32\r.manager.NodeH\x00\x12\x1e\n\x05\x65\x64ges\x18\x02 \x01(\x0b\x32\r.manager.EdgeH\x00\x42\x0e\n\x0cGraphElement2\xdc\x01\n\x0eManagerService\x12\x44\n\x0eRegisterWorker\x12\x19.manager.WorkerProperties\x1a\x17.manager.WorkerMetadata\x12\x44\n\x10GetGraphFragment\x12\x19.manager.WorkerProperties\x1a\x13.manager.GraphPiece0\x01\x12>\n\x0eGetWorkersList\x12\x16.google.protobuf.Empty\x1a\x14.manager.WorkersListb\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'manager_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _WORKERMETADATA._serialized_start=55
-  _WORKERMETADATA._serialized_end=90
-  _WORKERSLIST._serialized_start=92
-  _WORKERSLIST._serialized_end=207
-  _WORKERSLIST_WORKERENTRY._serialized_start=158
-  _WORKERSLIST_WORKERENTRY._serialized_end=207
-  _NODE._serialized_start=209
-  _NODE._serialized_end=232
-  _EDGE._serialized_start=234
-  _EDGE._serialized_end=352
-  _GRAPHPIECE._serialized_start=354
-  _GRAPHPIECE._serialized_end=446
-  _MANAGERSERVICE._serialized_start=449
-  _MANAGERSERVICE._serialized_end=663
+  _WORKERPROPERTIES._serialized_start=55
+  _WORKERPROPERTIES._serialized_end=100
+  _WORKERMETADATA._serialized_start=102
+  _WORKERMETADATA._serialized_end=137
+  _WORKERSLIST._serialized_start=139
+  _WORKERSLIST._serialized_end=254
+  _WORKERSLIST_WORKERENTRY._serialized_start=205
+  _WORKERSLIST_WORKERENTRY._serialized_end=254
+  _NODE._serialized_start=256
+  _NODE._serialized_end=279
+  _EDGE._serialized_start=281
+  _EDGE._serialized_end=399
+  _GRAPHPIECE._serialized_start=401
+  _GRAPHPIECE._serialized_end=493
+  _MANAGERSERVICE._serialized_start=496
+  _MANAGERSERVICE._serialized_end=716
 # @@protoc_insertion_point(module_scope)

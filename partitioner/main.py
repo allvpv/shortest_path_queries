@@ -1,13 +1,12 @@
 import argparse
-import re
-import gzip
 import grpc
 from concurrent import futures
 
 from parsers.open_street_map import OpenStreetMapParser
-from partitioners.grid import GridPartitioner, QuantilePartitioner
+from partitioners.grid import QuantilePartitioner
 from partitioners import is_in_partition
 import rpc_servers.manager_pb2_grpc as manager_pb2_grpc
+import rpc_servers.manager_server as manager_server
 
 
 def main():
@@ -33,7 +32,7 @@ def main():
     print('Starting the server...')
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     manager_pb2_grpc.add_ManagerServiceServicer_to_server(
-        manager_pb2_grpc.ManagerServiceServicer(partitions, parser), server
+        manager_server.ManagerServiceServicer(partitions, parser), server
     )
     server.add_insecure_port('[::]:50051')
     server.start()
