@@ -23,7 +23,7 @@ class ManagerServiceStub(object):
                 )
         self.GetGraphFragment = channel.unary_stream(
                 '/manager.ManagerService/GetGraphFragment',
-                request_serializer=manager__pb2.WorkerProperties.SerializeToString,
+                request_serializer=manager__pb2.WorkerMetadata.SerializeToString,
                 response_deserializer=manager__pb2.GraphPiece.FromString,
                 )
         self.GetWorkersList = channel.unary_unary(
@@ -67,7 +67,7 @@ def add_ManagerServiceServicer_to_server(servicer, server):
             ),
             'GetGraphFragment': grpc.unary_stream_rpc_method_handler(
                     servicer.GetGraphFragment,
-                    request_deserializer=manager__pb2.WorkerProperties.FromString,
+                    request_deserializer=manager__pb2.WorkerMetadata.FromString,
                     response_serializer=manager__pb2.GraphPiece.SerializeToString,
             ),
             'GetWorkersList': grpc.unary_unary_rpc_method_handler(
@@ -115,7 +115,7 @@ class ManagerService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_stream(request, target, '/manager.ManagerService/GetGraphFragment',
-            manager__pb2.WorkerProperties.SerializeToString,
+            manager__pb2.WorkerMetadata.SerializeToString,
             manager__pb2.GraphPiece.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
