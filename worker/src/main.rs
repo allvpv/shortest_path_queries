@@ -40,18 +40,6 @@ async fn async_main(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     use generated::manager::manager_service_client::ManagerServiceClient;
     use generated::worker::worker_server::WorkerServer;
 
-    let client = ManagerServiceClient::connect(args.manager_addr)
-        .await
-        .map_err(|e| format!("Cannot connect to the manager: {:?}", e))?;
-
-    let mut receiver = GraphReceiver::new(client).await?;
-
-    println!("Worker id: {}", receiver.worker_id);
-
-    receiver.receive_graph().await?;
-
-    let service = WorkerService::new(receiver.graph, receiver.mapping);
-
     let listening_addr = match args.listening_addr.parse() {
         Ok(addr) => addr,
         Err(err) => {
@@ -62,6 +50,20 @@ async fn async_main(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             .into())
         }
     };
+
+    let listening_addr_unparsed = format!("{}", listening_addr);
+
+    let client = ManagerServiceClient::connect(args.manager_addr)
+        .await
+        .map_err(|e| format!("Cannot connect to the manager: {:?}", e))?;
+
+    let mut receiver = GraphReceiver::new(client, listening_addr_unparsed).await?;
+
+    println!("Worker id: {}", receiver.worker_id);
+
+    receiver.receive_graph().await?;
+
+    let service = WorkerService::new(receiver.graph, receiver.mapping);
 
     let server = WorkerServer::new(service);
 

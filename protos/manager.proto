@@ -6,11 +6,16 @@ package manager;
 // Interface exported by the parser/manager node.
 service ManagerService {
     // Methods for use by workers
-    rpc RegisterWorker(google.protobuf.Empty) returns (WorkerMetadata);
-    rpc GetGraphFragment(google.protobuf.Empty) returns (stream GraphPiece);
+    rpc RegisterWorker(WorkerProperties) returns (WorkerMetadata);
+    rpc GetGraphFragment(WorkerMetadata) returns (stream GraphPiece);
 
     // Methods for use by executers
     rpc GetWorkersList(google.protobuf.Empty) returns (WorkersList);
+}
+
+message WorkerProperties {
+    // Address on which Worker listens for Executers
+    string listening_address = 1;
 }
 
 message WorkerMetadata {
