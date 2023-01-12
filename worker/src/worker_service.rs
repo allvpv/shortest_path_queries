@@ -4,7 +4,7 @@ use futures::stream::Stream;
 use tonic::{Request, Response, Status};
 
 use generated::worker::worker_server::Worker;
-use generated::worker::{IsPresent, NodeId as NodeIdProto, RequestDjikstra, ResponseDjikstra};
+use generated::worker::{ArePresent, NodeIds, RequestDjikstra, ResponseDjikstra};
 
 use crate::graph_store::{IdIdxMapping, SPQGraph};
 use crate::proto_helpers;
@@ -34,14 +34,22 @@ type ResponseDjikstraStream =
 
 #[tonic::async_trait]
 impl Worker for WorkerService {
-    async fn is_node_present(
+    async fn are_nodes_present(
         &self,
-        request: Request<NodeIdProto>,
-    ) -> Result<Response<IsPresent>, Status> {
-        let node_id = request.get_ref().node_id;
-        let present = self.processors.get_mapping().contains_key(&node_id);
+        request: Request<NodeIds>,
+    ) -> Result<Response<ArePresent>, Status> {
+        let NodeIds {
+            node_from_id,
+            node_to_id,
+        } = request.into_inner();
 
-        Ok(Response::new(IsPresent { present }))
+        let node_from_present = self.processors.get_mapping().contains_key(&node_from_id);
+        let node_to_present = self.processors.get_mapping().contains_key(&node_to_id);
+
+        Ok(Response::new(ArePresent {
+            node_from_present,
+            node_to_present,
+        }))
     }
 
     type UpdateDjikstraStream = ResponseDjikstraStream;
