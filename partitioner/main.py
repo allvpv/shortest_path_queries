@@ -13,7 +13,7 @@ def main():
     parser = argparse.ArgumentParser(description='Parse graphs and compute node regions')
     parser.add_argument("graph", help="Graph input file in OSM XML format (compressed with .gz)")
     parser.add_argument("--n_partitions", type=int, help="Number of graph partitions", required=False, default=16)
-    parser.add_argument("--ports", metavar="K", help="connect to workers on ports [K, K+N_PARTITIONS) ", required=True)
+    parser.add_argument("--port", metavar="K", help="Start listening on port K", type=int, required=True)
 
     args = parser.parse_args()
 
@@ -34,7 +34,7 @@ def main():
     manager_pb2_grpc.add_ManagerServiceServicer_to_server(
         manager_server.ManagerServiceServicer(partitions, parser), server
     )
-    server.add_insecure_port('[::]:50051')
+    server.add_insecure_port(f'[::]:{args.port}')
     server.start()
     server.wait_for_termination()
 
