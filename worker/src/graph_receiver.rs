@@ -1,8 +1,8 @@
 use tonic::transport::Channel;
 use tonic::{Request, Status};
 
-use generated::manager::graph_piece;
 use generated::manager::manager_service_client::ManagerServiceClient;
+use generated::manager::{graph_piece, WorkerMetadata, WorkerProperties};
 
 use crate::graph_store;
 
@@ -16,8 +16,13 @@ pub struct GraphReceiver {
 }
 
 impl GraphReceiver {
-    pub async fn new(mut client: ManagerServiceClient<Channel>) -> Result<Self, tonic::Status> {
-        let response = client.register_worker(Request::new(())).await?;
+    pub async fn new(
+        mut client: ManagerServiceClient<Channel>,
+        listening_address: String,
+    ) -> Result<Self, tonic::Status> {
+        let response = client
+            .register_worker(Request::new(WorkerProperties { listening_address }))
+            .await?;
         let worker_id = response.get_ref().worker_id;
 
         Ok(GraphReceiver {
@@ -31,7 +36,9 @@ impl GraphReceiver {
     pub async fn receive_graph(&mut self) -> Result<(), Status> {
         let mut stream = self
             .client
-            .get_graph_fragment(Request::new(()))
+            .get_graph_fragment(Request::new(WorkerMetadata {
+                worker_id: self.worker_id,
+            }))
             .await?
             .into_inner();
 
