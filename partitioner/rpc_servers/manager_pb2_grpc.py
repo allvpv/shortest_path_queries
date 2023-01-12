@@ -3,6 +3,7 @@
 import grpc
 import re
 import threading
+import traceback
 
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 from partitioners import is_in_partition
@@ -75,10 +76,11 @@ def send_partition_edges(node_cache, partitions, parser):
 
             # TODO: Should we consider it a loop??
             for node1, node2 in zip(way_nodes, way_nodes[1:]):
-                edge_info = get_edge_info(node1, node2, node_cache, parser, partitions, partition_ix)
-                yield manager__pb2.GraphPiece(
-                    edges=edge_info
-                )
+                if node1 in node_cache and node_cache[node1][2] == partition_ix:
+                    edge_info = get_edge_info(node1, node2, node_cache, parser, partitions, partition_ix)
+                    yield manager__pb2.GraphPiece(
+                        edges=edge_info
+                    )
 
 
 class ManagerServiceStub(object):
@@ -123,27 +125,27 @@ class ManagerServiceServicer(object):
         """Methods for use by workers
         """
         with self.workers_lock:
-            worker_id = len(self.workers)
+            worker_id = len(self.workers) + 1
             self.workers[context.peer()] = worker_id
         return manager__pb2.WorkerMetadata(worker_id=worker_id)
 
     def GetGraphFragment(self, request, context):
         """Missing associated documentation comment in .proto file."""
-        with self.workers_lock:
-            partition_ix = self.workers[context.peer()]
-        node_cache = self.parser.get_partition_nodes(self.partitions, partition_ix)
-        for node_id in node_cache:
-            node_info = manager__pb2.Node(node_id=node_id)
-            yield manager__pb2.GraphPiece(
-                nodes=node_info
-            )
         try:
+            with self.workers_lock:
+                partition_ix = self.workers[context.peer()] - 1
+            node_cache = self.parser.get_partition_nodes(self.partitions, partition_ix)
+            for i, node_id in enumerate(node_cache):
+                node_info = manager__pb2.Node(node_id=node_id)
+                yield manager__pb2.GraphPiece(
+                    nodes=node_info
+                )
             for edge in send_partition_edges(node_cache, self.partitions.copy(), self.parser):
                 yield edge
         except Exception as e:
             context.set_code(grpc.StatusCode.ABORTED)
-            # context.set_details(f"What: {e}, Traceback: {traceback.format_exc()}")
-            context.set_details(f"What: {e}")
+            context.set_details(f"What: {e}, Traceback: {traceback.format_exc()}")
+            # context.set_details(f"What: {e}")
 
     def GetWorkersList(self, request, context):
         """Methods for use by executers
