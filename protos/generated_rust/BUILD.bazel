@@ -10,11 +10,12 @@ cargo_build_script(
     data = [
       "//protos:worker",
       "//protos:manager",
+      "//protos:executer",
       "@com_google_protobuf//:protoc",
       "@com_google_protobuf//:empty_proto",
     ],
     deps = [
-      "@worker_crates//:tonic-build",
+      "@crates//:tonic-build",
     ],
 )
 
@@ -25,8 +26,8 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         ":protogen",
-        "@worker_crates//:tonic",
-        "@worker_crates//:prost",
+        "@crates//:tonic",
+        "@crates//:prost",
     ],
 )
 

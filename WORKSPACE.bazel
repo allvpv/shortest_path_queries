@@ -57,12 +57,12 @@ crate_universe_dependencies(bootstrap = True)
 load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository", "splicing_config")
 
 crates_repository(
-    name = "worker_crates",
-    cargo_lockfile = "//worker:Cargo.Bazel.lock",
+    name = "crates",
+    cargo_lockfile = "//locks:Cargo.Bazel.lock",
     # `generator` is not necessary in official releases.
     # See load satement for `cargo_bazel_bootstrap`.
     generator = "@cargo_bazel_bootstrap//:cargo-bazel",
-    lockfile = "//worker:cargo-bazel-lock.json",
+    lockfile = "//locks:cargo-bazel-lock.json",
     packages = {
         "tonic": crate.spec(version = "0.8"),
         "prost": crate.spec(version = "0.11"),
@@ -70,7 +70,7 @@ crates_repository(
         "tonic-build": crate.spec(version = "0.8"),
         "futures": crate.spec(version = "0.3"),
         "tokio": crate.spec(
-            version = "1.23.0",
+            version = "1.23",
             features = ["rt-multi-thread", "macros", "sync", "time"],
         ),
         "clap": crate.spec(
@@ -79,6 +79,7 @@ crates_repository(
         ),
         "tracing": crate.spec(version = "0.1"),
         "tracing-subscriber": crate.spec(version = "0.3"),
+        "async-stream": crate.spec(version = "0.3"),
     },
     splicing_config = splicing_config(
         resolver_version = "2",
@@ -86,11 +87,11 @@ crates_repository(
 )
 
 load(
-    "@worker_crates//:defs.bzl",
-    worker_crate_repositories = "crate_repositories",
+    "@crates//:defs.bzl",
+    crate_repositories = "crate_repositories",
 )
 
-worker_crate_repositories()
+crate_repositories()
 
 load("@rules_rust//tools/rust_analyzer:deps.bzl", "rust_analyzer_dependencies")
 

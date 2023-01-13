@@ -1,7 +1,7 @@
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_clippy")
 
 rust_binary(
-    name = "worker",
+    name = "executer",
     srcs = glob(["src/*.rs"]),
     edition = "2021",
     deps = [
@@ -9,14 +9,16 @@ rust_binary(
         "@crates//:tonic",
         "@crates//:prost",
         "@crates//:futures",
-        "@crates//:num_cpus",
         "@crates//:tokio",
         "@crates//:clap",
+        "@crates//:tracing",
+        "@crates//:tracing-subscriber",
+        "@crates//:async-stream",
     ],
 )
 
 rust_clippy(
-    name = "worker_clippy",
+    name = "executer_clippy",
     testonly = True,
-    deps = [":worker"],
+    deps = [":executer"],
 )

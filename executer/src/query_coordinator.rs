@@ -8,12 +8,13 @@ use tonic::Request;
 use tonic::Result;
 use tonic::Status;
 
-use crate::executer::QueryFinished;
+use generated::executer::QueryFinished;
+use generated::worker::request_djikstra;
+use generated::worker::response_djikstra;
+use generated::worker::worker_client::WorkerClient;
+use generated::worker::RequestDjikstra;
+
 use crate::executer_service::{NodeId, ShortestPathLen};
-use crate::worker::request_djikstra;
-use crate::worker::response_djikstra;
-use crate::worker::worker_client::WorkerClient;
-use crate::worker::RequestDjikstra;
 use crate::workers_connection::Worker;
 use crate::workers_connection::WorkerId;
 use crate::ErrorCollection;
@@ -109,7 +110,7 @@ impl QueryCoordinator {
         from: NodeId,
         to: NodeId,
     ) -> Result<(WorkerIdx, WorkerIdx), Status> {
-        let message = crate::worker::NodeIds {
+        let message = generated::worker::NodeIds {
             node_from_id: from,
             node_to_id: to,
         };
@@ -246,7 +247,7 @@ impl ErrorCollection {
 }
 
 mod proto_helpers {
-    use crate::worker::{request_djikstra, RequestDjikstra};
+    use generated::worker::{request_djikstra, RequestDjikstra};
 
     pub fn pack_query_data(data: request_djikstra::QueryData) -> RequestDjikstra {
         RequestDjikstra {

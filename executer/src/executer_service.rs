@@ -1,8 +1,9 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 use tonic::{Request, Response, Result};
 
-use crate::executer::executer_server::Executer;
-use crate::executer::{QueryData, QueryFinished};
+use generated::executer::executer_server::Executer;
+use generated::executer::{QueryData, QueryFinished};
+
 use crate::query_coordinator::QueryCoordinator;
 use crate::workers_connection::Worker;
 

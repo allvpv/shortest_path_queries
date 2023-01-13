@@ -2,24 +2,13 @@ mod executer_service;
 mod query_coordinator;
 mod workers_connection;
 
-pub mod manager {
-    tonic::include_proto!("manager");
-}
-
-pub mod worker {
-    tonic::include_proto!("worker");
-}
-
-pub mod executer {
-    tonic::include_proto!("executer");
-}
-
 use clap::Parser;
 use tonic::transport::Server;
 
-use executer::executer_server::ExecuterServer;
-use executer_service::ExecuterService;
-use manager::manager_service_client::ManagerServiceClient;
+use generated::executer::executer_server::ExecuterServer;
+use generated::manager::manager_service_client::ManagerServiceClient;
+
+use crate::executer_service::ExecuterService;
 
 #[derive(Parser)]
 struct Args {

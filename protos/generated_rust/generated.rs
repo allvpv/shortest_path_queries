@@ -5,3 +5,7 @@ pub mod manager {
 pub mod worker {
     tonic::include_proto!("worker");
 }
+
+pub mod executer {
+    tonic::include_proto!("executer");
+}

@@ -2,8 +2,8 @@ use futures::Future;
 use tonic::transport::{Channel, Error};
 use tonic::Status;
 
-use crate::manager::manager_service_client::ManagerServiceClient;
-use crate::worker::worker_client::WorkerClient;
+use generated::manager::manager_service_client::ManagerServiceClient;
+use generated::worker::worker_client::WorkerClient;
 
 pub type WorkerId = u32;
 
@@ -13,7 +13,7 @@ pub struct Worker {
     pub channel: WorkerClient<Channel>,
 }
 
-pub type WorkerAddrList = Vec<crate::manager::workers_list::WorkerEntry>;
+pub type WorkerAddrList = Vec<generated::manager::workers_list::WorkerEntry>;
 pub type WorkerList = Vec<Worker>;
 
 // Get workers addresses sorted by ID
