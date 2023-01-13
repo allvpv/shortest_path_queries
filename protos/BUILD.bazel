@@ -1,6 +1,4 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@rules_proto_grpc//cpp:defs.bzl", "cpp_grpc_library")
-load("@rules_proto_grpc//python:defs.bzl", "python_grpc_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -20,17 +18,5 @@ proto_library(
 proto_library(
     name = "executer",
     srcs = [":executer.proto"],
-    visibility = ["//visibility:public"],
-)
-
-python_grpc_library(
-    name = "manager_py",
-    protos = [":manager"],
-    visibility = ["//visibility:public"],
-)
-
-python_grpc_library(
-    name = "worker_py",
-    protos = [":worker"],
     visibility = ["//visibility:public"],
 )

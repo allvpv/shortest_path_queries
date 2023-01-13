@@ -1,8 +1,0 @@
-py_binary(
-    name = "partitioner",
-    main = "main.py",
-    srcs = glob(["**/*.py"]),
-    deps = ["//protos:manager_py"],
-    visibility = ["//visibility:public"],
-    legacy_create_init = True,
-)
