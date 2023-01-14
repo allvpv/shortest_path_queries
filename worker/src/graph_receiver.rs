@@ -41,6 +41,7 @@ impl GraphReceiver {
             }))
             .await?
             .into_inner();
+        println!("requested graph");
 
         while let Some(response) = stream.message().await? {
             use graph_piece::GraphElement::{Edges, Nodes};
@@ -66,6 +67,7 @@ impl GraphReceiver {
                 }
             }
         }
+        println!("finished receiving graph");
 
         Ok(())
     }

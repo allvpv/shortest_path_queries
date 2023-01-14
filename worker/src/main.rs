@@ -51,7 +51,7 @@ async fn async_main(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let listening_addr_unparsed = format!("{}", listening_addr);
+    let listening_addr_unparsed = format!("http://{}", listening_addr);
 
     let client = ManagerServiceClient::connect(args.manager_addr)
         .await

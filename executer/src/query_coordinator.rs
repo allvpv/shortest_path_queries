@@ -156,6 +156,7 @@ impl QueryCoordinator {
         let from = from.ok_or_else(|| Status::not_found("Requested `from` node not found"))?;
         let to = to.ok_or_else(|| Status::not_found("Requested `to` node not found"))?;
 
+        println!("from_node in worker {}, to_node in worker {}", from, to);
         Ok((from, to))
     }
 
@@ -188,6 +189,8 @@ impl QueryCoordinator {
 
         while let Some(current) = next_worker {
             let outbound = self.prepare_outbound_stream(current);
+            println!("updating dijkstra for worker {}", current);
+
             let mut inbound = self.workers[current]
                 .channel
                 .update_djikstra(outbound)
@@ -197,6 +200,9 @@ impl QueryCoordinator {
             self.workers[current].minimal = None;
 
             while let Some(response) = inbound.message().await? {
+                // FIXME doesn't enter the loop, because inbound.message().await? return None
+                println!("updated dijkstra for worker {}", current);
+
                 let message = match response.message_type {
                     Some(msg) => msg,
                     None => {
@@ -207,12 +213,15 @@ impl QueryCoordinator {
 
                 match message {
                     MessageType::Success(s) => {
+                        println!("Success: {}", s.shortest_path_len);
                         return Ok(QueryFinished {
                             shortest_path_len: s.shortest_path_len,
                         });
                     }
 
                     MessageType::NewForeignNode(node) => {
+                        println!("NewForeignNode: {}", node.node_id);
+
                         let worker_idx = self
                             .workers
                             .binary_search_by_key(&node.worker_id, |w| w.id)
@@ -224,6 +233,7 @@ impl QueryCoordinator {
                     }
 
                     MessageType::SmallestDomesticNode(node) => {
+                        println!("SmallestDomesticNode: {}", node.shortest_path_len);
                         self.workers[current].minimal = Some(node.shortest_path_len);
                     }
                 }

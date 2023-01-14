@@ -26,7 +26,7 @@ def main():
         if parser.is_node_line(line):
             node, lat, lon = parser.get_node_info(line)
             partition_ix, partition = next(filter(lambda p: is_in_partition(lon, lat, p[1]), enumerate(partitions)))
-            print(f"Node: id={node}, latitude={lat}, longitude={lon}, partition_ix={partition_ix}, partition={partition}")
+            # print(f"Node: id={node}, latitude={lat}, longitude={lon}, partition_ix={partition_ix}, partition={partition}")
 
     # Serve
     print('Starting the server...')
@@ -36,6 +36,7 @@ def main():
     )
     server.add_insecure_port(f'[::]:{args.port}')
     server.start()
+    print('Started the server.')
     server.wait_for_termination()
 
 

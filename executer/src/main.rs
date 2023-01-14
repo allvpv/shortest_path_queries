@@ -30,6 +30,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Getting workers list");
     let addrs = workers_connection::get_sorted_workers_addresses(&mut manager).await?;
 
+    println!("{}", addrs.len());
+    for i in &addrs {
+        println!("{}", i.address);
+    }
+
     println!("Connecting to workers");
     let workers = workers_connection::connect_to_all_workers(addrs).await?;
 
