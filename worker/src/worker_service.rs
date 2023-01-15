@@ -63,6 +63,8 @@ impl Worker for WorkerService {
 
         use request_djikstra::MessageType::QueryData;
 
+        debug!("applying update");
+
         let query_data = {
             if let Some(QueryData(data)) = next_message {
                 data
@@ -71,7 +73,7 @@ impl Worker for WorkerService {
             }
         };
 
-        println!("got query data");
+        debug!(" -> query data: {query_data:?}");
 
         let mut processor = self
             .processors
@@ -81,7 +83,6 @@ impl Worker for WorkerService {
         processor.update_smallest_foreign(query_data.smallest_foreign_node);
 
         Self::apply_update(&mut processor, &mut inbound).await?;
-        println!("applied update");
 
         // Move the processor in and out the task to satisfy the borrow checker
         let (processor, result) = tokio::task::spawn_blocking(move || processor.djikstra_step())
@@ -90,15 +91,13 @@ impl Worker for WorkerService {
 
         let output: ResponseDjikstraStream = match result {
             Finished(node_id, shortest) => {
-                println!("finished {}", node_id);
+                info!("finished with success (node: {}, path len: {})", node_id, shortest);
 
                 self.processors.forget_query(processor)?;
                 let message = proto_helpers::success(node_id, shortest);
                 Box::pin(futures::stream::once(async { Ok(message) }))
             }
             Remaining(responses) => {
-                println!("remaining {}", responses.len()); // FIXME remaining 0, maybe error in djikstra_step()
-
                 self.processors.put_back_query(processor)?;
                 let messages = responses.into_iter().map(Ok);
                 Box::pin(futures::stream::iter(messages))

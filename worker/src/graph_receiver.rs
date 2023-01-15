@@ -20,10 +20,14 @@ impl GraphReceiver {
         mut client: ManagerServiceClient<Channel>,
         listening_address: String,
     ) -> Result<Self, tonic::Status> {
+        debug!("registering this worker in manager");
+
         let response = client
             .register_worker(Request::new(WorkerProperties { listening_address }))
             .await?;
         let worker_id = response.get_ref().worker_id;
+
+        debug!("worker_id has been assigned: {worker_id}");
 
         Ok(GraphReceiver {
             client,
@@ -34,6 +38,8 @@ impl GraphReceiver {
     }
 
     pub async fn receive_graph(&mut self) -> Result<(), Status> {
+        info!("requesting graph");
+
         let mut stream = self
             .client
             .get_graph_fragment(Request::new(WorkerMetadata {
@@ -41,7 +47,6 @@ impl GraphReceiver {
             }))
             .await?
             .into_inner();
-        println!("requested graph");
 
         while let Some(response) = stream.message().await? {
             use graph_piece::GraphElement::{Edges, Nodes};
@@ -50,6 +55,8 @@ impl GraphReceiver {
                 Some(Nodes(node)) => {
                     let node_idx = self.graph.add_node(node.node_id);
                     self.mapping.insert(node.node_id, node_idx);
+
+                    debug!("got node (id: {}, idx: {})", node.node_id, node_idx)
                 }
                 Some(Edges(edge)) => {
                     let node_from_idx = self.mapping.get_mapping(edge.node_from_id)?;
@@ -60,14 +67,21 @@ impl GraphReceiver {
                         None => NodePointer::Domestic(self.mapping.get_mapping(edge.node_to_id)?),
                     };
 
+                    debug!(
+                        "got edge (from_id: {}, to_id: {}, weight: {}); \
+                         (from_idx: {}, pointer: {:?})",
+                        edge.node_from_id, edge.node_to_id, edge.weight, node_from_idx, pointer_to
+                    );
+
                     self.graph.add_edge(node_from_idx, pointer_to, edge.weight);
                 }
                 None => {
-                    eprintln!("Warning: Got empty GraphPiece with no node or edge");
+                    warn!("got empty GraphPiece with no node or edge!");
                 }
             }
         }
-        println!("finished receiving graph");
+
+        debug!("finished receiving graph");
 
         Ok(())
     }

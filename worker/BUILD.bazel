@@ -12,6 +12,8 @@ rust_binary(
         "@crates//:num_cpus",
         "@crates//:tokio",
         "@crates//:clap",
+        "@crates//:log",
+        "@crates//:pretty_env_logger",
     ],
 )
 

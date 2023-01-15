@@ -48,6 +48,11 @@ impl QueryProcessor {
     }
 
     pub fn update_smallest_foreign(&mut self, smallest_foreign: Option<ShortestPathLen>) {
+        debug!(
+            " -> replacing old smallest_foreign {:?} with new {:?}",
+            self.smallest_foreign, smallest_foreign
+        );
+
         self.smallest_foreign = smallest_foreign;
     }
 
@@ -58,12 +63,11 @@ impl QueryProcessor {
     ) -> Result<(), Status> {
         let not_visited = self.visited.replace(id).is_none();
 
-        println!("New domestic node; node_id: {id}, len: {shortest}");
+        debug!("new domestic node; node_id: {id}, len: {shortest}");
 
         if not_visited {
-            println!("Node is not visited, pushing to queue");
             let idx = self.mapping.get_mapping(id)?;
-            println!("Node id is: {id}; idx: {idx}");
+            debug!("node (id {id}, idx {idx}) is not visited: pushing to queue");
 
             self.queue.push(QueueElement { idx, shortest });
         }
@@ -77,12 +81,22 @@ impl QueryProcessor {
         let mut responses = RVec::new();
 
         let append_response_foreign = |responses: &mut RVec, node_id, worker_id, shortest| {
+            debug!(
+                "pushing new foreign node to response (id: {}, worker: {}, len: {})",
+                node_id, worker_id, shortest
+            );
+
             responses.push(proto_helpers::new_foreign_node(
                 node_id, worker_id, shortest,
             ));
         };
 
         let append_response_domestic = |responses: &mut RVec, shortest| {
+            debug!(
+                "pushing smallest domestic node to response (len: {})",
+                shortest
+            );
+
             responses.push(proto_helpers::domestic_smallest_node(shortest));
         };
 
