@@ -70,6 +70,7 @@ impl Worker for WorkerService {
                 return Err(ErrorCollection::wrong_first_message());
             }
         };
+
         println!("got query data");
 
         let mut processor = self

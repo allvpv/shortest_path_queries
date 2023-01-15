@@ -58,11 +58,14 @@ impl QueryProcessor {
     ) -> Result<(), Status> {
         let not_visited = self.visited.replace(id).is_none();
 
+        println!("New domestic node; node_id: {id}, len: {shortest}");
+
         if not_visited {
-            self.queue.push(QueueElement {
-                idx: self.mapping.get_mapping(id)?,
-                shortest,
-            });
+            println!("Node is not visited, pushing to queue");
+            let idx = self.mapping.get_mapping(id)?;
+            println!("Node id is: {id}; idx: {idx}");
+
+            self.queue.push(QueueElement { idx, shortest });
         }
 
         Ok(())

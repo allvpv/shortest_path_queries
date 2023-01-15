@@ -185,6 +185,9 @@ impl QueryCoordinator {
     }
 
     pub async fn shortest_path_query(mut self) -> Result<QueryFinished, Status> {
+        // Push initial node
+        self.workers[self.first_worker_idx].push_new_domestic(self.node_id_from, 0);
+
         let mut next_worker = Some(self.first_worker_idx);
 
         while let Some(current) = next_worker {
