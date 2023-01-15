@@ -98,6 +98,8 @@ impl Worker for WorkerService {
                 Box::pin(futures::stream::once(async { Ok(message) }))
             }
             Remaining(responses) => {
+                info!("forwarding the request to the executer");
+
                 self.processors.put_back_query(processor)?;
                 let messages = responses.into_iter().map(Ok);
                 Box::pin(futures::stream::iter(messages))

@@ -196,33 +196,33 @@ impl QueryCoordinator {
         while let Some(current) = next_worker {
             let outbound = self.prepare_outbound_stream(current);
 
+            debug!("sending `update_dijkstra` request for worker {current}");
+
             let mut inbound = self.workers[current]
                 .channel
                 .update_djikstra(outbound)
                 .await?
                 .into_inner();
 
+            debug!("parsing `update_dijkstra` request from worker {current}:");
+
             self.workers[current].minimal = None;
 
             while let Some(response) = inbound.message().await? {
-                debug!("updated dijkstra for worker {current}");
-
                 let message = match response.message_type {
                     Some(msg) => msg,
                     None => {
-                        warn!("empty `ResponseDjikstra` in the stream!");
+                        warn!(" -> empty `ResponseDjikstra` in the stream!");
                         continue;
                     }
                 };
 
-                debug!("parsing the response from worker {current}");
-
                 match message {
                     MessageType::Success(s) => {
-                        info!("query finished with success: {}", s.shortest_path_len);
+                        info!(" -> query finished with success: {}", s.shortest_path_len);
 
                         return Ok(QueryFinished {
-                            shortest_path_len: s.shortest_path_len,
+                            shortest_path_len: Some(s.shortest_path_len),
                         });
                     }
 
@@ -240,26 +240,32 @@ impl QueryCoordinator {
                     }
 
                     MessageType::SmallestDomesticNode(node) => {
-                        debug!(" -> smallest domestic node has len: {}", node.shortest_path_len);
+                        debug!(
+                            " -> smallest domestic node has len: {}",
+                            node.shortest_path_len
+                        );
                         self.workers[current].minimal = Some(node.shortest_path_len);
                     }
                 }
             }
 
-            next_worker = self.global_shortest.map(|(worker, _)| worker);
+            debug!("finished parsing `update_djikstra` response from worker");
+
+            next_worker = self.global_shortest.take().map(|(worker, _)| worker);
         }
 
-        Err(ErrorCollection::path_not_found())
+        debug!("path was not found");
+
+        // Path not found
+        return Ok(QueryFinished {
+            shortest_path_len: None,
+        });
     }
 }
 
 impl ErrorCollection {
     fn worker_not_found(id: WorkerId) -> Status {
         Status::out_of_range(format!("worker with id: {id} does not exist"))
-    }
-
-    fn path_not_found() -> Status {
-        Status::internal("something went wrong and the path was not found")
     }
 }
 

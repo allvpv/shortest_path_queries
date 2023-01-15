@@ -68,8 +68,9 @@ impl QueryProcessor {
         if not_visited {
             let idx = self.mapping.get_mapping(id)?;
             debug!("node (id {id}, idx {idx}) is not visited: pushing to queue");
-
             self.queue.push(QueueElement { idx, shortest });
+        } else {
+            debug!("node (id {id}) was already visited");
         }
 
         Ok(())
