@@ -22,11 +22,19 @@ def main():
     partitions = quantile_partitioner.partition(parser, n_partitions=args.n_partitions)
 
     print(partitions)
+    partitions_count = {}
+
     for _, line in parser.get_lines():
         if parser.is_node_line(line):
             node, lat, lon = parser.get_node_info(line)
             partition_ix, partition = next(filter(lambda p: is_in_partition(lon, lat, p[1]), enumerate(partitions)))
-            # print(f"Node: id={node}, latitude={lat}, longitude={lon}, partition_ix={partition_ix}, partition={partition}")
+            if partition_ix in partitions_count:
+                partitions_count[partition_ix] += 1
+            else:
+                partitions_count[partition_ix] = 1
+
+    for p in partitions_count:
+        print("partition: {}, count: {}".format(p, partitions_count[p]))
 
     # Serve
     print('Starting the server...')
