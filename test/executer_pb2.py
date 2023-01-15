@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x65xecuter.proto\x12\x08\x65xecuter\"5\n\tQueryData\x12\x14\n\x0cnode_id_from\x18\x01 \x01(\x04\x12\x12\n\nnode_id_to\x18\x02 \x01(\x04\"*\n\rQueryFinished\x12\x19\n\x11shortest_path_len\x18\x01 \x01(\x04\x32M\n\x08\x45xecuter\x12\x41\n\x11ShortestPathQuery\x12\x13.executer.QueryData\x1a\x17.executer.QueryFinishedb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x65xecuter.proto\x12\x08\x65xecuter\"5\n\tQueryData\x12\x14\n\x0cnode_id_from\x18\x01 \x01(\x04\x12\x12\n\nnode_id_to\x18\x02 \x01(\x04\"E\n\rQueryFinished\x12\x1e\n\x11shortest_path_len\x18\x01 \x01(\x04H\x00\x88\x01\x01\x42\x14\n\x12_shortest_path_len2M\n\x08\x45xecuter\x12\x41\n\x11ShortestPathQuery\x12\x13.executer.QueryData\x1a\x17.executer.QueryFinishedb\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'executer_pb2', globals())
@@ -23,7 +23,7 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _QUERYDATA._serialized_start=28
   _QUERYDATA._serialized_end=81
   _QUERYFINISHED._serialized_start=83
-  _QUERYFINISHED._serialized_end=125
-  _EXECUTER._serialized_start=127
-  _EXECUTER._serialized_end=204
+  _QUERYFINISHED._serialized_end=152
+  _EXECUTER._serialized_start=154
+  _EXECUTER._serialized_end=231
 # @@protoc_insertion_point(module_scope)
