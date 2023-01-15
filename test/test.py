@@ -17,7 +17,7 @@ def main():
     with grpc.insecure_channel(args.executer_addr) as channel:
         stub = executer_pb2_grpc.ExecuterStub(channel)
         response = stub.ShortestPathQuery(executer_pb2.QueryData(node_id_from=args.from_node, node_id_to=args.to_node))
-    print("Shortest path length received: " + response.shortest_path_len)
+    print(f"Shortest path length received: {response.shortest_path_len}")
 
 
 if __name__ == "__main__":
