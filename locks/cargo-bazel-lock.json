@@ -1,6 +1,52 @@
 {
-  "checksum": "d12ce814076fbe6c102ea809a59ff4dc7b8ccc8a5809d1f914c67b4e91997ea2",
+  "checksum": "e1b4669d9225604d3d816083afc09c20b35eedfef3a56d314327213b0d23d8d3",
   "crates": {
+    "aho-corasick 0.7.20": {
+      "name": "aho-corasick",
+      "version": "0.7.20",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/aho-corasick/0.7.20/download",
+          "sha256": "cc936419f96fa211c1b9166887b38e5e40b19958e5b895be7c1f93adec7071ac"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "aho_corasick",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        }
+      ],
+      "library_target_name": "aho_corasick",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": [
+          "default",
+          "std"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "memchr 2.5.0",
+              "target": "memchr"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.7.20"
+      },
+      "license": "Unlicense OR MIT"
+    },
     "anyhow 1.0.68": {
       "name": "anyhow",
       "version": "1.0.68",
@@ -235,6 +281,62 @@
         ]
       },
       "license": "MIT OR Apache-2.0"
+    },
+    "atty 0.2.14": {
+      "name": "atty",
+      "version": "0.2.14",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/atty/0.2.14/download",
+          "sha256": "d9b39be18770d11421cdb1b9947a45dd3f37e93092cbf377614828a319d5fee8"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "atty",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        }
+      ],
+      "library_target_name": "atty",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [],
+          "selects": {
+            "cfg(target_os = \"hermit\")": [
+              {
+                "id": "hermit-abi 0.1.19",
+                "target": "hermit_abi"
+              }
+            ],
+            "cfg(unix)": [
+              {
+                "id": "libc 0.2.139",
+                "target": "libc"
+              }
+            ],
+            "cfg(windows)": [
+              {
+                "id": "winapi 0.3.9",
+                "target": "winapi"
+              }
+            ]
+          }
+        },
+        "edition": "2015",
+        "version": "0.2.14"
+      },
+      "license": "MIT"
     },
     "autocfg 1.1.0": {
       "name": "autocfg",
@@ -715,13 +817,13 @@
       },
       "license": "MIT/Apache-2.0"
     },
-    "clap 4.0.32": {
+    "clap 4.1.1": {
       "name": "clap",
-      "version": "4.0.32",
+      "version": "4.1.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/clap/4.0.32/download",
-          "sha256": "a7db700bc935f9e43e88d00b0850dae18a63773cfbec6d8e070fccf7fef89a39"
+          "url": "https://crates.io/api/v1/crates/clap/4.1.1/download",
+          "sha256": "4ec7a4128863c188deefe750ac1d1dfe66c236909f845af04beed823638dc1b2"
         }
       },
       "targets": [
@@ -772,7 +874,7 @@
               "target": "bitflags"
             },
             {
-              "id": "clap_lex 0.3.0",
+              "id": "clap_lex 0.3.1",
               "target": "clap_lex"
             },
             {
@@ -798,23 +900,23 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "clap_derive 4.0.21",
+              "id": "clap_derive 4.1.0",
               "target": "clap_derive"
             }
           ],
           "selects": {}
         },
-        "version": "4.0.32"
+        "version": "4.1.1"
       },
       "license": "MIT OR Apache-2.0"
     },
-    "clap_derive 4.0.21": {
+    "clap_derive 4.1.0": {
       "name": "clap_derive",
-      "version": "4.0.21",
+      "version": "4.1.0",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/clap_derive/4.0.21/download",
-          "sha256": "0177313f9f02afc995627906bbd8967e2be069f5261954222dac78290c2b9014"
+          "url": "https://crates.io/api/v1/crates/clap_derive/4.1.0/download",
+          "sha256": "684a277d672e91966334af371f1a7b5833f9aa00b07c84e92fbce95e00208ce8"
         }
       },
       "targets": [
@@ -865,17 +967,17 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "4.0.21"
+        "version": "4.1.0"
       },
       "license": "MIT OR Apache-2.0"
     },
-    "clap_lex 0.3.0": {
+    "clap_lex 0.3.1": {
       "name": "clap_lex",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/clap_lex/0.3.0/download",
-          "sha256": "0d4198f73e42b4936b35b5bb248d81d2b595ecb170da0bac7655c54eedfa8da8"
+          "url": "https://crates.io/api/v1/crates/clap_lex/0.3.1/download",
+          "sha256": "783fe232adfca04f90f56201b26d79682d4cd2625e0bc7290b95123afe558ade"
         }
       },
       "targets": [
@@ -907,7 +1009,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "license": "MIT OR Apache-2.0"
     },
@@ -941,7 +1043,7 @@
               "target": "async_stream"
             },
             {
-              "id": "clap 4.0.32",
+              "id": "clap 4.1.1",
               "target": "clap"
             },
             {
@@ -949,8 +1051,16 @@
               "target": "futures"
             },
             {
+              "id": "log 0.4.17",
+              "target": "log"
+            },
+            {
               "id": "num_cpus 1.15.0",
               "target": "num_cpus"
+            },
+            {
+              "id": "pretty_env_logger 0.4.0",
+              "target": "pretty_env_logger"
             },
             {
               "id": "prost 0.11.6",
@@ -1018,6 +1128,71 @@
         ],
         "edition": "2018",
         "version": "1.8.0"
+      },
+      "license": "MIT/Apache-2.0"
+    },
+    "env_logger 0.7.1": {
+      "name": "env_logger",
+      "version": "0.7.1",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/env_logger/0.7.1/download",
+          "sha256": "44533bbbb3bb3c1fa17d9f2e4e38bbbaf8396ba82193c4cb1b6445d711445d36"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "env_logger",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        }
+      ],
+      "library_target_name": "env_logger",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": [
+          "atty",
+          "default",
+          "humantime",
+          "regex",
+          "termcolor"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "atty 0.2.14",
+              "target": "atty"
+            },
+            {
+              "id": "humantime 1.3.0",
+              "target": "humantime"
+            },
+            {
+              "id": "log 0.4.17",
+              "target": "log"
+            },
+            {
+              "id": "regex 1.7.1",
+              "target": "regex"
+            },
+            {
+              "id": "termcolor 1.1.3",
+              "target": "termcolor"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.7.1"
       },
       "license": "MIT/Apache-2.0"
     },
@@ -2058,6 +2233,51 @@
       },
       "license": "MIT OR Apache-2.0"
     },
+    "hermit-abi 0.1.19": {
+      "name": "hermit-abi",
+      "version": "0.1.19",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/hermit-abi/0.1.19/download",
+          "sha256": "62b467343b94ba476dcb2500d242dadbb39557df889310ac77c5d99100aaac33"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "hermit_abi",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        }
+      ],
+      "library_target_name": "hermit_abi",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": [
+          "default"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "libc 0.2.139",
+              "target": "libc"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.1.19"
+      },
+      "license": "MIT/Apache-2.0"
+    },
     "hermit-abi 0.2.6": {
       "name": "hermit-abi",
       "version": "0.2.6",
@@ -2329,6 +2549,48 @@
         ],
         "edition": "2018",
         "version": "1.0.2"
+      },
+      "license": "MIT/Apache-2.0"
+    },
+    "humantime 1.3.0": {
+      "name": "humantime",
+      "version": "1.3.0",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/humantime/1.3.0/download",
+          "sha256": "df004cfca50ef23c36850aaaa59ad52cc70d0e90243c3c7737a4dd32dc7a3c4f"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "humantime",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        }
+      ],
+      "library_target_name": "humantime",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "quick-error 1.2.3",
+              "target": "quick_error"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "1.3.0"
       },
       "license": "MIT/Apache-2.0"
     },
@@ -3758,6 +4020,52 @@
       },
       "license": "MIT/Apache-2.0"
     },
+    "pretty_env_logger 0.4.0": {
+      "name": "pretty_env_logger",
+      "version": "0.4.0",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/pretty_env_logger/0.4.0/download",
+          "sha256": "926d36b9553851b8b0005f1275891b392ee4d2d833852c417ed025477350fb9d"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "pretty_env_logger",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        }
+      ],
+      "library_target_name": "pretty_env_logger",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "env_logger 0.7.1",
+              "target": "env_logger"
+            },
+            {
+              "id": "log 0.4.17",
+              "target": "log"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "0.4.0"
+      },
+      "license": "MIT/Apache-2.0"
+    },
     "prettyplease 0.1.23": {
       "name": "prettyplease",
       "version": "0.1.23",
@@ -4323,6 +4631,39 @@
       },
       "license": "Apache-2.0"
     },
+    "quick-error 1.2.3": {
+      "name": "quick-error",
+      "version": "1.2.3",
+      "repository": {
+        "Http": {
+          "url": "https://crates.io/api/v1/crates/quick-error/1.2.3/download",
+          "sha256": "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "quick_error",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "include": [
+                "**/*.rs"
+              ],
+              "exclude": []
+            }
+          }
+        }
+      ],
+      "library_target_name": "quick_error",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2015",
+        "version": "1.2.3"
+      },
+      "license": "MIT/Apache-2.0"
+    },
     "quote 1.0.23": {
       "name": "quote",
       "version": "1.0.23",
@@ -4620,11 +4961,34 @@
           "**"
         ],
         "crate_features": [
+          "aho-corasick",
+          "default",
+          "memchr",
+          "perf",
+          "perf-cache",
+          "perf-dfa",
+          "perf-inline",
+          "perf-literal",
           "std",
-          "unicode-bool"
+          "unicode",
+          "unicode-age",
+          "unicode-bool",
+          "unicode-case",
+          "unicode-gencat",
+          "unicode-perl",
+          "unicode-script",
+          "unicode-segment"
         ],
         "deps": {
           "common": [
+            {
+              "id": "aho-corasick 0.7.20",
+              "target": "aho_corasick"
+            },
+            {
+              "id": "memchr 2.5.0",
+              "target": "memchr"
+            },
             {
               "id": "regex-syntax 0.6.28",
               "target": "regex_syntax"
@@ -4666,7 +5030,15 @@
           "**"
         ],
         "crate_features": [
-          "unicode-bool"
+          "default",
+          "unicode",
+          "unicode-age",
+          "unicode-bool",
+          "unicode-case",
+          "unicode-gencat",
+          "unicode-perl",
+          "unicode-script",
+          "unicode-segment"
         ],
         "edition": "2018",
         "version": "0.6.28"
@@ -6995,6 +7367,7 @@
           "errhandlingapi",
           "fileapi",
           "handleapi",
+          "minwinbase",
           "minwindef",
           "ntdef",
           "processenv",
@@ -7746,7 +8119,7 @@
   },
   "binary_crates": [
     "cc 1.0.78",
-    "clap 4.0.32"
+    "clap 4.1.1"
   ],
   "workspace_members": {
     "direct-cargo-bazel-deps 0.0.1": ""

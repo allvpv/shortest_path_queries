@@ -1,3 +1,7 @@
+extern crate pretty_env_logger;
+#[macro_use]
+extern crate log;
+
 mod executer_service;
 mod query_coordinator;
 mod workers_connection;
@@ -23,36 +27,30 @@ pub struct ErrorCollection {}
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
+    pretty_env_logger::init();
 
-    println!("Connecting to manager");
-    let mut manager = ManagerServiceClient::connect(args.manager_addr).await?;
-
-    println!("Getting workers list");
-    let addrs = workers_connection::get_sorted_workers_addresses(&mut manager).await?;
-
-    println!("{}", addrs.len());
-    for i in &addrs {
-        println!("{}", i.address);
-    }
-
-    println!("Connecting to workers");
-    let workers = workers_connection::connect_to_all_workers(addrs).await?;
-
-    println!("Running the server");
     let listening_addr = match args.listening_addr.parse() {
         Ok(addr) => addr,
         Err(err) => {
             return Err(format!(
-                "Cannot parse listening address `{}`: {err}",
+                "cannot parse listening address `{}`: {err}",
                 args.listening_addr
             )
             .into())
         }
     };
 
+    info!("connecting to manager");
+    let mut manager = ManagerServiceClient::connect(args.manager_addr).await?;
+
+    let addresses = workers_connection::get_sorted_workers_addresses(&mut manager).await?;
+    let workers = workers_connection::connect_to_all_workers(addresses).await?;
+
+    info!("creating the server");
     let service = ExecuterService::new(workers);
     let server = ExecuterServer::new(service);
 
+    info!("starting server at address: '{}'", listening_addr);
     Server::builder()
         .add_service(server)
         .serve(listening_addr)

@@ -40,9 +40,11 @@ impl Executer for ExecuterService {
         } = request.into_inner();
 
         let query_id = self.get_new_query_id();
+        debug!("`query_id` is: {query_id}");
+
         let coordinator =
             QueryCoordinator::new(&self.workers, node_id_from, node_id_to, query_id).await?;
-        println!("Query coordinator created, id: {}", query_id);
+
         let response = coordinator.shortest_path_query().await?;
 
         Ok(Response::new(response))

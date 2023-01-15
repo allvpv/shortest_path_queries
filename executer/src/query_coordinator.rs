@@ -133,7 +133,7 @@ impl QueryCoordinator {
             //
             match current.replace(worker_idx) {
                 None => Ok(()),
-                Some(_) => Err(Status::internal("Two workers cannot contain same node")),
+                Some(_) => Err(Status::internal("two workers cannot contain same node")),
             }
         };
 
@@ -153,10 +153,12 @@ impl QueryCoordinator {
             }
         }
 
-        let from = from.ok_or_else(|| Status::not_found("Requested `from` node not found"))?;
-        let to = to.ok_or_else(|| Status::not_found("Requested `to` node not found"))?;
+        let from = from.ok_or_else(|| Status::not_found("requested `from` node not found"))?;
+        let to = to.ok_or_else(|| Status::not_found("requested `to` node not found"))?;
 
-        println!("from_node in worker {}, to_node in worker {}", from, to);
+        debug!("node `from` found in worker {from}");
+        debug!("node `to` found in worker {to}");
+
         Ok((from, to))
     }
 
@@ -164,22 +166,23 @@ impl QueryCoordinator {
         &mut self,
         current: WorkerIdx,
     ) -> AsyncStream<RequestDjikstra, impl Future<Output = ()>> {
-        let smallest_foreign_node = self.find_shortest_foreign(current);
+        let query_data = request_djikstra::QueryData {
+            query_id: self.query_id,
+            final_node_id: self.node_id_to,
+            smallest_foreign_node: self.find_shortest_foreign(current),
+        };
+
+        debug!("sending `update_dijkstra` request to worker {current}");
+        debug!(" -> query_data: {query_data:?}");
+
         let new_nodes = self.workers[current].extract_new_domestic();
-        let final_node_id = self.node_id_to;
-        let query_id = self.query_id;
 
         async_stream::stream! {
-            yield proto_helpers::pack_query_data(request_djikstra::QueryData {
-                query_id,
-                final_node_id,
-                smallest_foreign_node,
-            });
+            yield proto_helpers::pack_query_data(query_data);
 
-            let node_packed = new_nodes.into_iter().map(proto_helpers::pack_new_domestic_node);
-
-            for node in node_packed {
-                yield node;
+            for node in new_nodes.into_iter() {
+                debug!(" -> node: {node:?}");
+                yield proto_helpers::pack_new_domestic_node(node);
             }
         }
     }
@@ -192,7 +195,6 @@ impl QueryCoordinator {
 
         while let Some(current) = next_worker {
             let outbound = self.prepare_outbound_stream(current);
-            println!("updating dijkstra for worker {}", current);
 
             let mut inbound = self.workers[current]
                 .channel
@@ -203,27 +205,29 @@ impl QueryCoordinator {
             self.workers[current].minimal = None;
 
             while let Some(response) = inbound.message().await? {
-                // FIXME doesn't enter the loop, because inbound.message().await? return None
-                println!("updated dijkstra for worker {}", current);
+                debug!("updated dijkstra for worker {current}");
 
                 let message = match response.message_type {
                     Some(msg) => msg,
                     None => {
-                        println!("Warning: Empty ResponseDjikstra in the stream");
+                        warn!("empty `ResponseDjikstra` in the stream!");
                         continue;
                     }
                 };
 
+                debug!("parsing the response from worker {current}");
+
                 match message {
                     MessageType::Success(s) => {
-                        println!("Success: {}", s.shortest_path_len);
+                        info!("query finished with success: {}", s.shortest_path_len);
+
                         return Ok(QueryFinished {
                             shortest_path_len: s.shortest_path_len,
                         });
                     }
 
                     MessageType::NewForeignNode(node) => {
-                        println!("NewForeignNode: {}", node.node_id);
+                        debug!(" -> received foreign node {node:?}");
 
                         let worker_idx = self
                             .workers
@@ -236,7 +240,7 @@ impl QueryCoordinator {
                     }
 
                     MessageType::SmallestDomesticNode(node) => {
-                        println!("SmallestDomesticNode: {}", node.shortest_path_len);
+                        debug!(" -> smallest domestic node has len: {}", node.shortest_path_len);
                         self.workers[current].minimal = Some(node.shortest_path_len);
                     }
                 }
@@ -251,11 +255,11 @@ impl QueryCoordinator {
 
 impl ErrorCollection {
     fn worker_not_found(id: WorkerId) -> Status {
-        Status::out_of_range(format!("Worker with id: {id} does not exist"))
+        Status::out_of_range(format!("worker with id: {id} does not exist"))
     }
 
     fn path_not_found() -> Status {
-        Status::internal("Something went wrong and the path was not found")
+        Status::internal("something went wrong and the path was not found")
     }
 }
 

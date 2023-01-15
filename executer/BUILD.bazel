@@ -14,6 +14,8 @@ rust_binary(
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
         "@crates//:async-stream",
+        "@crates//:log",
+        "@crates//:pretty_env_logger",
     ],
 )
 
