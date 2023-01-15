@@ -15,7 +15,11 @@ def create_logfile(logfile_name):
 def get_query(stub, node_from, node_to):
     print("Trying to get shortest path from {} to {} ...".format(node_from, node_to))
     resp = stub.ShortestPathQuery(executer_pb2.QueryData(node_id_from=node_from, node_id_to=node_to))
-    print(f"Shortest path length received: {resp.shortest_path_len}")
+
+    if resp.HasField("shortest_path_len"):
+        print(f"Shortest path length received: {resp.shortest_path_len}")
+    else:
+        print("Path not found")
 
 def spawn_partitioner(graph_filepath, listening_p, n_partitions, log_file):
     args = [sys.executable, "../partitioner/main.py",

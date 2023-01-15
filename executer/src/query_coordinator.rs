@@ -196,7 +196,7 @@ impl QueryCoordinator {
         while let Some(current) = next_worker {
             let outbound = self.prepare_outbound_stream(current);
 
-            debug!("sending `update_dijkstra` request for worker {current}");
+            debug!("sending `update_dijkstra` request for worker (idx {current})");
 
             let mut inbound = self.workers[current]
                 .channel
@@ -204,7 +204,7 @@ impl QueryCoordinator {
                 .await?
                 .into_inner();
 
-            debug!("parsing `update_dijkstra` request from worker {current}:");
+            debug!("parsing `update_dijkstra` request from worker (idx {current}):");
 
             self.workers[current].minimal = None;
 
@@ -233,6 +233,11 @@ impl QueryCoordinator {
                             .workers
                             .binary_search_by_key(&node.worker_id, |w| w.id)
                             .map_err(|_| ErrorCollection::worker_not_found(node.worker_id))?;
+
+                        debug!(
+                            " -> node belongs to worker (id {}, idx {})",
+                            node.node_id, worker_idx
+                        );
 
                         self.workers[worker_idx]
                             .push_new_domestic(node.node_id, node.shortest_path_len);
