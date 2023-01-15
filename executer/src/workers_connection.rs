@@ -54,7 +54,7 @@ pub fn connect_to_all_workers(
 
     let workers_connect = addrs.into_iter().map(|w| {
         debug!(
-            " -> connecting to worker {} at address '{}'",
+            " -> connecting to worker[id {}] at address '{}'",
             w.worker_id, w.address
         );
 

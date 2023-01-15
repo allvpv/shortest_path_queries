@@ -56,7 +56,7 @@ impl GraphReceiver {
                     let node_idx = self.graph.add_node(node.node_id);
                     self.mapping.insert(node.node_id, node_idx);
 
-                    debug!("got node (id: {}, idx: {})", node.node_id, node_idx)
+                    debug!("got node[id: {}, idx: {}]", node.node_id, node_idx)
                 }
                 Some(Edges(edge)) => {
                     let node_from_idx = self.mapping.get_mapping(edge.node_from_id)?;
@@ -68,8 +68,8 @@ impl GraphReceiver {
                     };
 
                     debug!(
-                        "got edge (from_id: {}, to_id: {}, weight: {}); \
-                         (from_idx: {}, pointer: {:?})",
+                        "got edge[from_node_id: {}, to_node_id: {}, \
+                        weight: {}, from_idx: {}, pointer: {:?}]",
                         edge.node_from_id, edge.node_to_id, edge.weight, node_from_idx, pointer_to
                     );
 

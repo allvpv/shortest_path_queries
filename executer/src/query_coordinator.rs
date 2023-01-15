@@ -156,8 +156,8 @@ impl QueryCoordinator {
         let from = from.ok_or_else(|| Status::not_found("requested `from` node not found"))?;
         let to = to.ok_or_else(|| Status::not_found("requested `to` node not found"))?;
 
-        debug!("node `from` found in worker {from}");
-        debug!("node `to` found in worker {to}");
+        debug!("node `from` found in worker[id {from}]");
+        debug!("node `to` found in worker[id {to}]");
 
         Ok((from, to))
     }
@@ -172,7 +172,7 @@ impl QueryCoordinator {
             smallest_foreign_node: self.find_shortest_foreign(current),
         };
 
-        debug!("sending `update_dijkstra` request to worker {current}");
+        debug!("sending `update_dijkstra` request to worker[idx {current}]");
         debug!(" -> query_data: {query_data:?}");
 
         let new_nodes = self.workers[current].extract_new_domestic();
@@ -196,7 +196,7 @@ impl QueryCoordinator {
         while let Some(current) = next_worker {
             let outbound = self.prepare_outbound_stream(current);
 
-            debug!("sending `update_dijkstra` request for worker (idx {current})");
+            debug!("sending `update_dijkstra` request for worker[idx {current}]");
 
             let mut inbound = self.workers[current]
                 .channel
@@ -204,7 +204,7 @@ impl QueryCoordinator {
                 .await?
                 .into_inner();
 
-            debug!("parsing `update_dijkstra` request from worker (idx {current}):");
+            debug!("parsing `update_dijkstra` request from worker[idx {current}]:");
 
             self.workers[current].minimal = None;
 
@@ -235,7 +235,7 @@ impl QueryCoordinator {
                             .map_err(|_| ErrorCollection::worker_not_found(node.worker_id))?;
 
                         debug!(
-                            " -> node belongs to worker (id {}, idx {})",
+                            " -> node[id {}] belongs to worker[idx {}]",
                             node.node_id, worker_idx
                         );
 
@@ -270,7 +270,7 @@ impl QueryCoordinator {
 
 impl ErrorCollection {
     fn worker_not_found(id: WorkerId) -> Status {
-        Status::out_of_range(format!("worker with id: {id} does not exist"))
+        Status::out_of_range(format!("worker[id: {id}] does not exist"))
     }
 }
 

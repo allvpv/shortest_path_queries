@@ -83,8 +83,8 @@ impl QueryProcessor {
 
         let append_response_foreign = |responses: &mut RVec, node_id, worker_id, shortest| {
             debug!(
-                "pushing new foreign node to response (id: {}, worker: {}, len: {})",
-                node_id, worker_id, shortest
+                "pushing new foreign node[id: {}, len: {}] from worker[id: {}] to response",
+                node_id, shortest, worker_id
             );
 
             responses.push(proto_helpers::new_foreign_node(
@@ -94,7 +94,7 @@ impl QueryProcessor {
 
         let append_response_domestic = |responses: &mut RVec, shortest| {
             debug!(
-                "pushing smallest domestic node to response (len: {})",
+                "pushing smallest domestic node[len: {}] to response",
                 shortest
             );
 
