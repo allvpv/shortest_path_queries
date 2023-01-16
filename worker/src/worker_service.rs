@@ -91,7 +91,10 @@ impl Worker for WorkerService {
 
         let output: ResponseDjikstraStream = match result {
             Finished(node_id, shortest) => {
-                info!("finished with success (node[id {}, len: {}])", node_id, shortest);
+                info!(
+                    "finished with success (node[id {}, len: {}])",
+                    node_id, shortest
+                );
 
                 self.processors.forget_query(processor)?;
                 let message = proto_helpers::success(node_id, shortest);

@@ -27,7 +27,7 @@ type WorkerIdx = usize;
 struct WorkerExtended {
     id: WorkerId,
     channel: WorkerClient<Channel>,
-    minimal: Option<NodeId>,
+    minimal: Option<ShortestPathLen>,
     new_nodes: Vec<NewDomesticNode>,
 }
 
@@ -42,11 +42,16 @@ impl WorkerExtended {
     }
 
     fn push_new_domestic(&mut self, node_id: NodeId, shortest_path_len: ShortestPathLen) {
-        self.minimal = std::cmp::min(self.minimal, Some(shortest_path_len));
         self.new_nodes.push(NewDomesticNode {
             node_id,
             shortest_path_len,
         });
+
+        let update = self.minimal.is_none() || self.minimal.unwrap() > shortest_path_len;
+
+        if update {
+            self.minimal = Some(shortest_path_len);
+        };
     }
 
     fn extract_new_domestic(&mut self) -> std::vec::Vec<NewDomesticNode> {
@@ -63,23 +68,9 @@ pub struct QueryCoordinator {
 
     first_worker_idx: WorkerIdx,
     last_worker_idx: WorkerIdx,
-
-    global_shortest: Option<(WorkerIdx, ShortestPathLen)>,
 }
 
 impl QueryCoordinator {
-    fn update_shortest(&mut self, worker: WorkerIdx, shortest: ShortestPathLen) {
-        match self.global_shortest.as_mut() {
-            None => self.global_shortest = Some((worker, shortest)),
-            Some((worker_, shortest_)) => {
-                if shortest < *shortest_ {
-                    *worker_ = worker;
-                    *shortest_ = shortest;
-                }
-            }
-        }
-    }
-
     fn find_shortest_foreign(&self, current: WorkerIdx) -> Option<ShortestPathLen> {
         self.workers
             .iter()
@@ -101,7 +92,6 @@ impl QueryCoordinator {
             node_id_to: to,
             first_worker_idx: worker_from,
             last_worker_idx: worker_to,
-            global_shortest: None,
         })
     }
 
@@ -241,7 +231,6 @@ impl QueryCoordinator {
 
                         self.workers[worker_idx]
                             .push_new_domestic(node.node_id, node.shortest_path_len);
-                        self.update_shortest(worker_idx, node.shortest_path_len);
                     }
 
                     MessageType::SmallestDomesticNode(node) => {
@@ -249,6 +238,7 @@ impl QueryCoordinator {
                             " -> smallest domestic node has len: {}",
                             node.shortest_path_len
                         );
+
                         self.workers[current].minimal = Some(node.shortest_path_len);
                     }
                 }
@@ -256,7 +246,13 @@ impl QueryCoordinator {
 
             debug!("finished parsing `update_djikstra` response from worker");
 
-            next_worker = self.global_shortest.take().map(|(worker, _)| worker);
+            next_worker = self
+                .workers
+                .iter()
+                .enumerate()
+                .filter(|(_, w)| w.minimal.is_some())
+                .min_by_key(|(_, w)| w.minimal)
+                .map(|(idx, _)| idx);
         }
 
         debug!("path was not found");
