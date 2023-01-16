@@ -185,7 +185,8 @@ impl QueueElement {
 
 impl Ord for QueueElement {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.shortest.cmp(&other.shortest)
+        // Note `reverse`: smallest element on top
+        self.shortest.cmp(&other.shortest).reverse()
     }
 }
 
