@@ -30,6 +30,7 @@ def main():
             print(f'node: {node}; lat: {lat}; lon: {lon}')
 
             partition_ix, partition = next(filter(lambda p: is_in_partition(lon, lat, p[1]), enumerate(partitions)))
+            print(f"Node: id={node}, latitude={lat}, longitude={lon}, partition_ix={partition_ix}, partition={partition}")
             if partition_ix in partitions_count:
                 partitions_count[partition_ix] += 1
             else:

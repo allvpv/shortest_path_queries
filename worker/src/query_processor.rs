@@ -103,6 +103,11 @@ impl QueryProcessor {
 
         let check_success = |node_id, shortest| {
             if self.final_node == node_id {
+                debug!(
+                "success!, node: {} length: {}",
+                    node_id,
+                    shortest
+            );
                 Some(StepResult::Finished(node_id, shortest))
             } else {
                 None
@@ -114,6 +119,11 @@ impl QueryProcessor {
             // Smallest node does not belong to this worker? Time to stop the query.
             if let Some(smf) = self.smallest_foreign {
                 if smf < node.shortest {
+                    debug!(
+                        "smallest node does not belong to this worker, {} vs {}",
+                        node.shortest,
+                        smf
+                    );
                     append_response_domestic(&mut responses, node.shortest);
                     break;
                 }

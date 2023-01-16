@@ -194,9 +194,9 @@ impl QueryCoordinator {
         let mut next_worker = Some(self.first_worker_idx);
 
         while let Some(current) = next_worker {
-            let outbound = self.prepare_outbound_stream(current);
+            debug!("current worker: {}", current);
 
-            debug!("sending `update_dijkstra` request for worker[idx {current}]");
+            let outbound = self.prepare_outbound_stream(current);
 
             let mut inbound = self.workers[current]
                 .channel
@@ -204,7 +204,7 @@ impl QueryCoordinator {
                 .await?
                 .into_inner();
 
-            debug!("parsing `update_dijkstra` request from worker[idx {current}]:");
+            debug!("parsing `update_dijkstra` response from worker[idx {current}]:");
 
             self.workers[current].minimal = None;
 
