@@ -1,3 +1,7 @@
+extern crate pretty_env_logger;
+#[macro_use]
+extern crate log;
+
 mod graph_receiver;
 mod graph_store;
 mod proto_helpers;
@@ -27,6 +31,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let num_cpus = num_cpus::get();
 
+    pretty_env_logger::init();
+
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         // Our "blocking" threads will do CPU-bound tasks (as opposed to IO), so the upper limit
@@ -44,23 +50,21 @@ async fn async_main(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         Ok(addr) => addr,
         Err(err) => {
             return Err(format!(
-                "Cannot parse listening address `{}`: {err}",
+                "cannot parse listening address `{}`: {err}",
                 args.listening_addr
             )
             .into())
         }
     };
 
-    let listening_addr_unparsed = format!("{}", listening_addr);
+    let listening_addr_unparsed = format!("http://{}", listening_addr);
 
+    info!("connecting to manager");
     let client = ManagerServiceClient::connect(args.manager_addr)
         .await
         .map_err(|e| format!("Cannot connect to the manager: {:?}", e))?;
 
     let mut receiver = GraphReceiver::new(client, listening_addr_unparsed).await?;
-
-    println!("Worker id: {}", receiver.worker_id);
-
     receiver.receive_graph().await?;
 
     let service = WorkerService::new(receiver.graph, receiver.mapping);

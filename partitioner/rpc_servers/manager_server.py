@@ -77,6 +77,8 @@ def send_partition_edges(node_cache, partitions, parser):
             for node1, node2 in zip(way_nodes, way_nodes[1:]):
                 if node1 in node_cache and node_cache[node1][2] == partition_ix:
                     edge_info = get_edge_info(node1, node2, node_cache, parser, partitions, partition_ix)
+                    print(f'Sending edge: {edge_info}')
+
                     yield manager__pb2.GraphPiece(
                         edges=edge_info
                     )

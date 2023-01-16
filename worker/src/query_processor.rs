@@ -48,6 +48,11 @@ impl QueryProcessor {
     }
 
     pub fn update_smallest_foreign(&mut self, smallest_foreign: Option<ShortestPathLen>) {
+        debug!(
+            " -> replacing old smallest_foreign {:?} with new {:?}",
+            self.smallest_foreign, smallest_foreign
+        );
+
         self.smallest_foreign = smallest_foreign;
     }
 
@@ -58,11 +63,14 @@ impl QueryProcessor {
     ) -> Result<(), Status> {
         let not_visited = self.visited.replace(id).is_none();
 
+        debug!("new domestic node; node_id: {id}, len: {shortest}");
+
         if not_visited {
-            self.queue.push(QueueElement {
-                idx: self.mapping.get_mapping(id)?,
-                shortest,
-            });
+            let idx = self.mapping.get_mapping(id)?;
+            debug!("node (id {id}, idx {idx}) is not visited: pushing to queue");
+            self.queue.push(QueueElement { idx, shortest });
+        } else {
+            debug!("node (id {id}) was already visited");
         }
 
         Ok(())
@@ -74,17 +82,28 @@ impl QueryProcessor {
         let mut responses = RVec::new();
 
         let append_response_foreign = |responses: &mut RVec, node_id, worker_id, shortest| {
+            debug!(
+                "pushing new foreign node[id: {}, len: {}] from worker[id: {}] to response",
+                node_id, shortest, worker_id
+            );
+
             responses.push(proto_helpers::new_foreign_node(
                 node_id, worker_id, shortest,
             ));
         };
 
         let append_response_domestic = |responses: &mut RVec, shortest| {
+            debug!(
+                "pushing smallest domestic node[len: {}] to response",
+                shortest
+            );
+
             responses.push(proto_helpers::domestic_smallest_node(shortest));
         };
 
         let check_success = |node_id, shortest| {
             if self.final_node == node_id {
+                debug!("success!, node: {} length: {}", node_id, shortest);
                 Some(StepResult::Finished(node_id, shortest))
             } else {
                 None
@@ -96,6 +115,10 @@ impl QueryProcessor {
             // Smallest node does not belong to this worker? Time to stop the query.
             if let Some(smf) = self.smallest_foreign {
                 if smf < node.shortest {
+                    debug!(
+                        "smallest node does not belong to this worker, {} vs {}",
+                        node.shortest, smf
+                    );
                     append_response_domestic(&mut responses, node.shortest);
                     break;
                 }
@@ -162,7 +185,8 @@ impl QueueElement {
 
 impl Ord for QueueElement {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.shortest.cmp(&other.shortest)
+        // Note `reverse`: smallest element on top
+        self.shortest.cmp(&other.shortest).reverse()
     }
 }
 

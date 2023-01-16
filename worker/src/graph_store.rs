@@ -39,7 +39,7 @@ impl IdIdxMapper for IdIdxMapping {
     fn get_mapping(&self, id: NodeId) -> Result<NodeIdx, Status> {
         self.get(&id)
             .copied()
-            .ok_or_else(|| Status::invalid_argument(format!("Cannot find node with id: {id}")))
+            .ok_or_else(|| Status::invalid_argument(format!("Cannot find node[id: {id}]")))
     }
 }
 

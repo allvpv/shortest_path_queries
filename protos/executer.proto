@@ -14,5 +14,6 @@ message QueryData {
 
 // TODO: Add backtracing and send the full path back
 message QueryFinished {
-    uint64 shortest_path_len = 1;
+    // Not present if the path was not found
+    optional uint64 shortest_path_len = 1;
 }
