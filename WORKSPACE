@@ -41,7 +41,6 @@ http_archive(
     urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.15.0/rules_rust-v0.15.0.tar.gz"],
 )
 
-
 load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
 rules_rust_dependencies()
 
@@ -99,3 +98,29 @@ load("@rules_rust//tools/rust_analyzer:deps.bzl", "rust_analyzer_dependencies")
 
 rust_analyzer_dependencies()
 
+#
+# Docker
+#
+http_archive(
+    name = "io_bazel_rules_docker",
+    sha256 = "b1e80761a8a8243d03ebca8845e9cc1ba6c82ce7c5179ce2b295cd36f7e394bf",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.25.0/rules_docker-v0.25.0.tar.gz"],
+)
+
+load("@rules_rust//rust:repositories.bzl", "rust_repositories")
+
+rust_repositories()
+
+load(
+    "@io_bazel_rules_docker//repositories:repositories.bzl",
+    container_repositories = "repositories",
+)
+
+container_repositories()
+
+load(
+    "@io_bazel_rules_docker//rust:image.bzl",
+    _rust_image_repos = "repositories",
+)
+
+_rust_image_repos()
