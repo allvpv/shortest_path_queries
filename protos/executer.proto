@@ -5,6 +5,8 @@ package executer;
 // Interface exported by the executer node and exposed to end user (very simple so far).
 service Executer {
     rpc ShortestPathQuery(QueryData) returns (QueryFinished);
+
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
 }
 
 message QueryData {
@@ -16,4 +18,15 @@ message QueryData {
 message QueryFinished {
     // Not present if the path was not found
     optional uint64 shortest_path_len = 1;
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+    enum ServingStatus {
+        UNKNOWN = 0;
+        SERVING = 1;
+        NOT_SERVING = 2;
+    }
+    ServingStatus status = 1;
 }

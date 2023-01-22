@@ -12,6 +12,7 @@ pub type WorkerId = u32;
 pub struct Worker {
     pub id: WorkerId,
     pub channel: WorkerClient<Channel>,
+    pub address: String
 }
 
 pub type WorkerAddrList = Vec<generated::manager::workers_list::WorkerEntry>;
@@ -58,9 +59,12 @@ pub fn connect_to_all_workers(
             w.worker_id, w.address
         );
 
+        let clone_address = w.address.clone();
+
         WorkerClient::connect(w.address).map_ok(move |channel| Worker {
             id: w.worker_id,
-            channel,
+            channel: channel,
+            address: clone_address,
         })
     });
 

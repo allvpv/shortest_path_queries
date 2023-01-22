@@ -47,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let workers = workers_connection::connect_to_all_workers(addresses).await?;
 
     info!("creating the server");
-    let service = ExecuterService::new(workers);
+    let service = ExecuterService::new(workers, &mut manager);
     let server = ExecuterServer::new(service);
 
     info!("starting server at address: '{}'", listening_addr);
