@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: executor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: executor
+  template:
+    metadata:
+      labels:
+        app: executor
+    spec:
+      containers:
+        - name: executor
+          image: "wrzontek/shortest_path_queries_executer:latest"
+          ports:
+            - containerPort: 49999
+          env:
+            - name: PARTITIONER_IP
+              value: http://partitioner:49998

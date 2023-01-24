@@ -140,6 +140,7 @@ crates_repository(
         "async-stream": crate.spec(version = "0.3"),
         "log": crate.spec(version = "0.4"),
         "pretty_env_logger": crate.spec(version = "0.4"),
+        "local-ip-address": crate.spec(version = "0.5.1")
     },
     splicing_config = splicing_config(
         resolver_version = "2",

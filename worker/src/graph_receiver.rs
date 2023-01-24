@@ -20,14 +20,14 @@ impl GraphReceiver {
         mut client: ManagerServiceClient<Channel>,
         listening_address: String,
     ) -> Result<Self, tonic::Status> {
-        debug!("registering this worker in manager");
+        println!("registering this worker in manager");
 
         let response = client
             .register_worker(Request::new(WorkerProperties { listening_address }))
             .await?;
         let worker_id = response.get_ref().worker_id;
 
-        debug!("worker_id has been assigned: {worker_id}");
+        println!("worker_id has been assigned: {worker_id}");
 
         Ok(GraphReceiver {
             client,
@@ -38,7 +38,7 @@ impl GraphReceiver {
     }
 
     pub async fn receive_graph(&mut self) -> Result<(), Status> {
-        info!("requesting graph");
+        println!("requesting graph");
 
         let mut stream = self
             .client
@@ -56,7 +56,7 @@ impl GraphReceiver {
                     let node_idx = self.graph.add_node(node.node_id);
                     self.mapping.insert(node.node_id, node_idx);
 
-                    debug!("got node[id: {}, idx: {}]", node.node_id, node_idx)
+                    println!("got node[id: {}, idx: {}]", node.node_id, node_idx)
                 }
                 Some(Edges(edge)) => {
                     let node_from_idx = self.mapping.get_mapping(edge.node_from_id)?;
@@ -67,7 +67,7 @@ impl GraphReceiver {
                         None => NodePointer::Domestic(self.mapping.get_mapping(edge.node_to_id)?),
                     };
 
-                    debug!(
+                    println!(
                         "got edge[from_node_id: {}, to_node_id: {}, \
                         weight: {}, from_idx: {}, pointer: {:?}]",
                         edge.node_from_id, edge.node_to_id, edge.weight, node_from_idx, pointer_to
@@ -81,7 +81,7 @@ impl GraphReceiver {
             }
         }
 
-        debug!("finished receiving graph");
+        println!("finished receiving graph");
 
         Ok(())
     }

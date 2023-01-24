@@ -17,6 +17,7 @@ rust_image(
         "@crates//:async-stream",
         "@crates//:log",
         "@crates//:pretty_env_logger",
+        "@crates//:local-ip-address",
     ],
 )
 

@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: partitioner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: partitioner
+  template:
+    metadata:
+      labels:
+        app: partitioner
+    spec:
+      containers:
+        - name: partitioner
+          image: "wrzontek/shortest_path_queries_partitioner:latest"
+          # command: ["python3", "main.py", "graphs/monaco.osm.gz"]
+          # args:
+          #   - "--port=49998"
+          #   - "--n_partitions=4"
+          ports:
+            - containerPort: 49998

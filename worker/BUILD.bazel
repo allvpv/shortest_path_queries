@@ -15,6 +15,7 @@ rust_image(
         "@crates//:clap",
         "@crates//:log",
         "@crates//:pretty_env_logger",
+        "@crates//:local-ip-address",
     ],
 )
 
