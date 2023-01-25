@@ -18,6 +18,15 @@ spec:
           command: ["python3", "-u", "main.py", "graphs/monaco.osm.gz"]
           args:
             - "--port=49998"
-            - "--n_partitions=4"
+            - "--n_partitions=$(N_PARTITIONS)"
           ports:
             - containerPort: 49998
+          envFrom:
+            - configMapRef:
+                name: worker-config
+          env:
+            - name: N_PARTITIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: worker-config
+                  key: WORKER_REPLICAS

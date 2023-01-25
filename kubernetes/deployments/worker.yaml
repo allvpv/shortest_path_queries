@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: worker
 spec:
-  replicas: 4
+  replicas: 1 # THIS IS SCALED TO PROPER VALUE IN run_deploy.sh
   selector:
     matchLabels:
       app: worker
@@ -14,7 +14,7 @@ spec:
     spec:
       affinity:
         podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution: # the whole point is to have workers on different nodes, but allow it
+          preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 100
               podAffinityTerm:
                 labelSelector:

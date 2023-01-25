@@ -6,7 +6,7 @@ spec:
   selector:
     app: executor
   ports:
-    - name: executor
+    - protocol: "TCP"
       port: 49999
       targetPort: 49999
   type: LoadBalancer
