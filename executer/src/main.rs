@@ -6,10 +6,11 @@ mod executer_service;
 mod query_coordinator;
 mod workers_connection;
 
-use tonic::transport::Server;
 use std::env;
 use std::net::ToSocketAddrs;
+
 use local_ip_address::local_ip;
+use tonic::transport::Server;
 
 use generated::executer::executer_server::ExecuterServer;
 use generated::manager::manager_service_client::ManagerServiceClient;
@@ -34,9 +35,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let service = ExecuterService::new(workers);
     let server = ExecuterServer::new(service);
 
-    let my_local_ip = local_ip().unwrap();
+    let my_local_ip = local_ip()?;
+
     println!("This is my local IP address: {:?}", my_local_ip);
-    let listening_addr = format!("{}:{}", my_local_ip, 49999).to_socket_addrs().expect("Failed to parse own address").next().expect("No own address found");
+    let listening_addr = format!("{}:{}", my_local_ip, 49999)
+        .to_socket_addrs()
+        .map_err(|e| format!("Failed to parse own address {e:?}"))?
+        .next()
+        .ok_or_else(|| "No own address found".to_string())?;
 
     println!("starting server at address: '{}'", listening_addr);
     Server::builder()
