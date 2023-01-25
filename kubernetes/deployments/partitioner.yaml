@@ -15,9 +15,9 @@ spec:
       containers:
         - name: partitioner
           image: "wrzontek/shortest_path_queries_partitioner:latest"
-          # command: ["python3", "main.py", "graphs/monaco.osm.gz"]
-          # args:
-          #   - "--port=49998"
-          #   - "--n_partitions=4"
+          command: ["python3", "-u", "main.py", "graphs/monaco.osm.gz"]
+          args:
+            - "--port=49998"
+            - "--n_partitions=4"
           ports:
             - containerPort: 49998

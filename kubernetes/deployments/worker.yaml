@@ -14,7 +14,7 @@ spec:
     spec:
       affinity:
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution: # the whole point is to have workers on different nodes
+          preferredDuringSchedulingIgnoredDuringExecution: # the whole point is to have workers on different nodes, but allow it
             - weight: 100
               podAffinityTerm:
                 labelSelector:
@@ -33,4 +33,4 @@ spec:
             - name: PARTITIONER_IP
               value: http://partitioner:49998
             - name: RUST_LOG
-              value: "RUST_LOG=worker=debug"
+              value: "worker=debug"
