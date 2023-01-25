@@ -23,7 +23,7 @@ pub async fn get_sorted_workers_addresses(
 ) -> Result<WorkerAddrList, Status> {
     use tonic::Request;
 
-    println!("getting workers list");
+    info!("getting workers list");
 
     let mut workers = manager
         .get_workers_list(Request::new(()))
@@ -33,13 +33,13 @@ pub async fn get_sorted_workers_addresses(
 
     workers.sort_by_key(|w| w.worker_id);
 
-    // if log_enabled!(Debug) {
-        println!("got {} addresses", workers.len());
+    if log_enabled!(Debug) {
+        debug!("got {} addresses", workers.len());
 
         for worker in workers.iter() {
-            println!(" -> '{}'", worker.address);
+            debug!(" -> '{}'", worker.address);
         }
-    // }
+    }
 
     Ok(workers)
 }
@@ -48,12 +48,12 @@ pub async fn get_sorted_workers_addresses(
 pub fn connect_to_all_workers(
     addrs: WorkerAddrList,
 ) -> impl Future<Output = Result<WorkerList, Error>> {
-    println!("connecting to workers");
+    info!("connecting to workers");
 
     use futures::TryFutureExt;
 
     let workers_connect = addrs.into_iter().map(|w| {
-        println!(
+        debug!(
             " -> connecting to worker[id {}] at address '{}'",
             w.worker_id, w.address
         );

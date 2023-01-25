@@ -8,12 +8,14 @@ mod proto_helpers;
 mod query_processor;
 mod query_processor_holder;
 mod worker_service;
+
+use std::env;
+use std::net::ToSocketAddrs;
+
+use local_ip_address::local_ip;
+use tonic::transport::Server;
 use tonic::Request;
 
-use tonic::transport::Server;
-use std::net::ToSocketAddrs;
-use std::env;
-use local_ip_address::local_ip;
 use crate::graph_receiver::GraphReceiver;
 use crate::worker_service::WorkerService;
 
@@ -37,17 +39,30 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     use generated::manager::manager_service_client::ManagerServiceClient;
     use generated::worker::worker_server::WorkerServer;
 
-    println!("connecting to manager");
-    let manager_addr = env::var("PARTITIONER_IP").unwrap();
-    println!("{}", manager_addr);
+    let manager_addr = env::var("PARTITIONER_IP")?;
+
+    info!(
+        "got manager ip address in environment variable `PARTITIONER_IP`: {}",
+        manager_addr
+    );
+
+    info!("connecting to manager");
+
     let client = ManagerServiceClient::connect(manager_addr)
         .await
         .map_err(|e| format!("Cannot connect to the manager: {:?}", e))?;
 
     let worker_port = 50000;
     let my_local_ip = local_ip().unwrap();
-    println!("This is my local IP address: {:?}", my_local_ip);
-    let listening_addr = format!("{}:{}", my_local_ip, worker_port).to_socket_addrs().expect("Failed to parse own address").next().expect("No own address found");
+
+    debug!("obtained own IP address: {:?}", my_local_ip);
+
+    let listening_addr = format!("{}:{}", my_local_ip, worker_port)
+        .to_socket_addrs()
+        .expect("failed to parse own address")
+        .next()
+        .expect("no own address found");
+
     let listening_addr_unparsed = format!("http://{}", listening_addr);
 
     let mut receiver = GraphReceiver::new(client, listening_addr_unparsed).await?;

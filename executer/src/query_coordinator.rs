@@ -146,8 +146,8 @@ impl QueryCoordinator {
         let from = from.ok_or_else(|| Status::not_found("requested `from` node not found"))?;
         let to = to.ok_or_else(|| Status::not_found("requested `to` node not found"))?;
 
-        println!("node `from` found in worker[id {from}]");
-        println!("node `to` found in worker[id {to}]");
+        debug!("node `from` found in worker[id {from}]");
+        debug!("node `to` found in worker[id {to}]");
 
         Ok((from, to))
     }
@@ -162,8 +162,8 @@ impl QueryCoordinator {
             smallest_foreign_node: self.find_shortest_foreign(current),
         };
 
-        println!("sending `update_dijkstra` request to worker[idx {current}]");
-        println!(" -> query_data: {query_data:?}");
+        debug!("sending `update_dijkstra` request to worker[idx {current}]");
+        debug!(" -> query_data: {query_data:?}");
 
         let new_nodes = self.workers[current].extract_new_domestic();
 
@@ -171,7 +171,7 @@ impl QueryCoordinator {
             yield proto_helpers::pack_query_data(query_data);
 
             for node in new_nodes.into_iter() {
-                println!(" -> node: {node:?}");
+                debug!(" -> node: {node:?}");
                 yield proto_helpers::pack_new_domestic_node(node);
             }
         }
@@ -184,7 +184,7 @@ impl QueryCoordinator {
         let mut next_worker = Some(self.first_worker_idx);
 
         while let Some(current) = next_worker {
-            println!("current worker: {}", current);
+            debug!("current worker: {}", current);
 
             let outbound = self.prepare_outbound_stream(current);
 
@@ -194,7 +194,7 @@ impl QueryCoordinator {
                 .await?
                 .into_inner();
 
-            println!("parsing `update_dijkstra` response from worker[idx {current}]:");
+            debug!("parsing `update_dijkstra` response from worker[idx {current}]:");
 
             self.workers[current].minimal = None;
 
@@ -209,7 +209,7 @@ impl QueryCoordinator {
 
                 match message {
                     MessageType::Success(s) => {
-                        println!(" -> query finished with success: {}", s.shortest_path_len);
+                        debug!(" -> query finished with success: {}", s.shortest_path_len);
 
                         return Ok(QueryFinished {
                             shortest_path_len: Some(s.shortest_path_len),
@@ -217,14 +217,14 @@ impl QueryCoordinator {
                     }
 
                     MessageType::NewForeignNode(node) => {
-                        println!(" -> received foreign node {node:?}");
+                        debug!(" -> received foreign node {node:?}");
 
                         let worker_idx = self
                             .workers
                             .binary_search_by_key(&node.worker_id, |w| w.id)
                             .map_err(|_| ErrorCollection::worker_not_found(node.worker_id))?;
 
-                        println!(
+                        debug!(
                             " -> node[id {}] belongs to worker[idx {}]",
                             node.node_id, worker_idx
                         );
@@ -234,7 +234,7 @@ impl QueryCoordinator {
                     }
 
                     MessageType::SmallestDomesticNode(node) => {
-                        println!(
+                        debug!(
                             " -> smallest domestic node has len: {}",
                             node.shortest_path_len
                         );
@@ -244,7 +244,7 @@ impl QueryCoordinator {
                 }
             }
 
-            println!("finished parsing `update_djikstra` response from worker");
+            debug!("finished parsing `update_djikstra` response from worker");
 
             next_worker = self
                 .workers
@@ -255,7 +255,7 @@ impl QueryCoordinator {
                 .map(|(idx, _)| idx);
         }
 
-        println!("path was not found");
+        debug!("path was not found");
 
         // Path not found
         return Ok(QueryFinished {

@@ -20,3 +20,5 @@ spec:
           env:
             - name: PARTITIONER_IP
               value: http://partitioner:49998
+            - name: RUST_LOG
+              value: "RUST_LOG=executer=debug"

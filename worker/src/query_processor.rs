@@ -48,7 +48,7 @@ impl QueryProcessor {
     }
 
     pub fn update_smallest_foreign(&mut self, smallest_foreign: Option<ShortestPathLen>) {
-        println!(
+        debug!(
             " -> replacing old smallest_foreign {:?} with new {:?}",
             self.smallest_foreign, smallest_foreign
         );
@@ -63,14 +63,14 @@ impl QueryProcessor {
     ) -> Result<(), Status> {
         let not_visited = self.visited.replace(id).is_none();
 
-        println!("new domestic node; node_id: {id}, len: {shortest}");
+        debug!("new domestic node; node_id: {id}, len: {shortest}");
 
         if not_visited {
             let idx = self.mapping.get_mapping(id)?;
-            println!("node (id {id}, idx {idx}) is not visited: pushing to queue");
+            debug!("node (id {id}, idx {idx}) is not visited: pushing to queue");
             self.queue.push(QueueElement { idx, shortest });
         } else {
-            println!("node (id {id}) was already visited");
+            debug!("node (id {id}) was already visited");
         }
 
         Ok(())
@@ -82,7 +82,7 @@ impl QueryProcessor {
         let mut responses = RVec::new();
 
         let append_response_foreign = |responses: &mut RVec, node_id, worker_id, shortest| {
-            println!(
+            debug!(
                 "pushing new foreign node[id: {}, len: {}] from worker[id: {}] to response",
                 node_id, shortest, worker_id
             );
@@ -93,7 +93,7 @@ impl QueryProcessor {
         };
 
         let append_response_domestic = |responses: &mut RVec, shortest| {
-            println!(
+            debug!(
                 "pushing smallest domestic node[len: {}] to response",
                 shortest
             );
@@ -103,7 +103,7 @@ impl QueryProcessor {
 
         let check_success = |node_id, shortest| {
             if self.final_node == node_id {
-                println!("success!, node: {} length: {}", node_id, shortest);
+                debug!("success!, node: {} length: {}", node_id, shortest);
                 Some(StepResult::Finished(node_id, shortest))
             } else {
                 None
@@ -115,7 +115,7 @@ impl QueryProcessor {
             // Smallest node does not belong to this worker? Time to stop the query.
             if let Some(smf) = self.smallest_foreign {
                 if smf < node.shortest {
-                    println!(
+                    debug!(
                         "smallest node does not belong to this worker, {} vs {}",
                         node.shortest, smf
                     );

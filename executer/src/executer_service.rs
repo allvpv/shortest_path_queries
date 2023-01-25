@@ -40,7 +40,7 @@ impl Executer for ExecuterService {
         } = request.into_inner();
 
         let query_id = self.get_new_query_id();
-        println!("`query_id` is: {query_id}");
+        info!("`query_id` is: {query_id}");
 
         if node_id_from == node_id_to {
             Ok(Response::new(QueryFinished {

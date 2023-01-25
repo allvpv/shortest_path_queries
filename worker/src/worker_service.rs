@@ -63,7 +63,7 @@ impl Worker for WorkerService {
 
         use request_djikstra::MessageType::QueryData;
 
-        println!("applying update");
+        debug!("applying update");
 
         let query_data = {
             if let Some(QueryData(data)) = next_message {
@@ -73,7 +73,7 @@ impl Worker for WorkerService {
             }
         };
 
-        println!(" -> query data: {query_data:?}");
+        debug!(" -> query data: {query_data:?}");
 
         let mut processor = self
             .processors
@@ -91,7 +91,7 @@ impl Worker for WorkerService {
 
         let output: ResponseDjikstraStream = match result {
             Finished(node_id, shortest) => {
-                println!(
+                info!(
                     "finished with success (node[id {}, len: {}])",
                     node_id, shortest
                 );
@@ -101,7 +101,7 @@ impl Worker for WorkerService {
                 Box::pin(futures::stream::once(async { Ok(message) }))
             }
             Remaining(responses) => {
-                println!("forwarding the request to the executer");
+                info!("forwarding the request to the executer");
 
                 self.processors.put_back_query(processor)?;
                 let messages = responses.into_iter().map(Ok);

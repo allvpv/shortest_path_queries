@@ -23,28 +23,29 @@ pub struct ErrorCollection {}
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
 
-    println!("connecting to manager");
+    info!("connecting to manager");
     let manager_addr = env::var("PARTITIONER_IP").unwrap();
     let mut manager = ManagerServiceClient::connect(manager_addr).await?;
-    println!("connected to manager");
+    info!("connected to manager");
 
     let addresses = workers_connection::get_sorted_workers_addresses(&mut manager).await?;
     let workers = workers_connection::connect_to_all_workers(addresses).await?;
 
-    println!("creating the server");
+    info!("creating the server");
     let service = ExecuterService::new(workers);
     let server = ExecuterServer::new(service);
 
     let my_local_ip = local_ip()?;
 
-    println!("This is my local IP address: {:?}", my_local_ip);
+    debug!("this is my local IP address: {:?}", my_local_ip);
+
     let listening_addr = format!("{}:{}", my_local_ip, 49999)
         .to_socket_addrs()
-        .map_err(|e| format!("Failed to parse own address {e:?}"))?
+        .map_err(|e| format!("failed to parse own address: {e:?}"))?
         .next()
-        .ok_or_else(|| "No own address found".to_string())?;
+        .ok_or_else(|| "no own address found".to_string())?;
 
-    println!("starting server at address: '{}'", listening_addr);
+    info!("starting server at address: '{}'", listening_addr);
     Server::builder()
         .add_service(server)
         .serve(listening_addr)
