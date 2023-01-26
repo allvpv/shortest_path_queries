@@ -88,7 +88,10 @@ impl QueryCoordinator {
             .workers
             .iter_mut()
             .filter(|worker| worker.is_involved)
-            .map(|worker| worker.channel.forget_query(ForgetQueryMessage { query_id }))
+            .map(|worker| {
+                info!(" -> sending forget request to worker[id: {}]", worker.id);
+                worker.channel.forget_query(ForgetQueryMessage { query_id })
+            })
             .collect::<Vec<_>>();
 
         try_join_all(futures).await?;

@@ -65,7 +65,10 @@ impl Worker for WorkerService {
         let mut processor = self.processors.get_processor(query_id)?;
 
         match processor {
-            Some(processor) => self.processors.forget_query(processor)?,
+            Some(processor) => {
+                info!("Query {query_id} cleaned up!");
+                self.processors.forget_query(processor)?
+            }
             None => {
                 warn!("Cannot forget query[{query_id}]. Processor does not exist");
             }
