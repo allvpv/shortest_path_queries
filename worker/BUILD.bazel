@@ -1,6 +1,7 @@
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_clippy")
+load("@rules_rust//rust:defs.bzl", "rust_clippy")
+load("@io_bazel_rules_docker//rust:image.bzl", "rust_image")
 
-rust_binary(
+rust_image(
     name = "worker",
     srcs = glob(["src/*.rs"]),
     edition = "2021",
@@ -14,6 +15,7 @@ rust_binary(
         "@crates//:clap",
         "@crates//:log",
         "@crates//:pretty_env_logger",
+        "@crates//:local-ip-address",
     ],
 )
 

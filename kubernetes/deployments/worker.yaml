@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: 1 # THIS IS SCALED TO PROPER VALUE IN run_deploy.sh
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - worker
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: worker
+          image: "wrzontek/shortest_path_queries_worker:latest"
+          ports:
+            - containerPort: 50000
+          env:
+            - name: PARTITIONER_IP
+              value: http://partitioner:49998
+            - name: RUST_LOG
+              value: "worker=debug"

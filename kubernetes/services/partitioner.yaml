@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: partitioner
+spec:
+  selector:
+    app: partitioner
+  ports:
+    - name: partitioner
+      port: 49998
+      targetPort: 49998
+  type: ClusterIP

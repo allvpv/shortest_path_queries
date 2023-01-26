@@ -209,7 +209,7 @@ impl QueryCoordinator {
 
                 match message {
                     MessageType::Success(s) => {
-                        info!(" -> query finished with success: {}", s.shortest_path_len);
+                        debug!(" -> query finished with success: {}", s.shortest_path_len);
 
                         return Ok(QueryFinished {
                             shortest_path_len: Some(s.shortest_path_len),
