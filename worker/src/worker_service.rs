@@ -4,7 +4,9 @@ use futures::stream::Stream;
 use tonic::{Request, Response, Status};
 
 use generated::worker::worker_server::Worker;
-use generated::worker::{ArePresent, NodeIds, RequestDjikstra, ResponseDjikstra};
+use generated::worker::{
+    ArePresent, ForgetQueryMessage, NodeIds, RequestDjikstra, ResponseDjikstra,
+};
 
 use crate::graph_store::{IdIdxMapping, SPQGraph};
 use crate::proto_helpers;
@@ -53,6 +55,24 @@ impl Worker for WorkerService {
     }
 
     type UpdateDjikstraStream = ResponseDjikstraStream;
+
+    async fn forget_query(
+        &self,
+        request: Request<ForgetQueryMessage>,
+    ) -> Result<Response<()>, Status> {
+        let ForgetQueryMessage { query_id } = request.into_inner();
+
+        let mut processor = self.processors.get_processor(query_id)?;
+
+        match processor {
+            Some(processor) => self.processors.forget_query(processor)?,
+            None => {
+                warn!("Cannot forget query[{query_id}]. Processor does not exist");
+            }
+        }
+
+        Ok(Response::new(()))
+    }
 
     async fn update_djikstra(
         &self,

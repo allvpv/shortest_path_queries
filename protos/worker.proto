@@ -1,4 +1,5 @@
 syntax="proto3";
+import "google/protobuf/empty.proto";
 
 package worker;
 
@@ -6,6 +7,7 @@ package worker;
 service Worker {
     rpc AreNodesPresent(NodeIds) returns (ArePresent);
     rpc UpdateDjikstra(stream RequestDjikstra) returns (stream ResponseDjikstra);
+    rpc ForgetQuery(ForgetQueryMessage) returns (google.protobuf.Empty);
 }
 
 message NodeIds {
@@ -16,6 +18,11 @@ message NodeIds {
 message ArePresent {
     bool node_from_present = 1;
     bool node_to_present = 2;
+}
+
+// Message sent to all involved workers when the query is finished
+message ForgetQueryMessage {
+    uint32 query_id = 1;
 }
 
 message RequestDjikstra {

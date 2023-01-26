@@ -93,10 +93,7 @@ impl QueryProcessorHolder {
         Ok(())
     }
 
-    //
-    // Remaining methods are not exposed.
-    //
-    fn get_processor(&self, query_id: QueryId) -> Result<Option<QueryProcessor>, Status> {
+    pub fn get_processor(&self, query_id: QueryId) -> Result<Option<QueryProcessor>, Status> {
         use std::collections::hash_map::Entry::{Occupied, Vacant};
         use QueryProcessorEntry::{Busy, Ready};
 

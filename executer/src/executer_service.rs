@@ -26,6 +26,13 @@ impl ExecuterService {
     fn get_new_query_id(&self) -> u32 {
         self.query_id_counter.fetch_add(1, Ordering::Relaxed)
     }
+
+    async fn send_forget_query(mut coordinator: QueryCoordinator) {
+        match coordinator.send_forget_to_workers().await {
+            Err(e) => warn!("Cannot send forget query to workers: {e}"),
+            Ok(()) => (),
+        }
+    }
 }
 
 #[tonic::async_trait]
@@ -47,9 +54,11 @@ impl Executer for ExecuterService {
                 shortest_path_len: Some(0),
             }))
         } else {
-            let coordinator =
+            let mut coordinator =
                 QueryCoordinator::new(&self.workers, node_id_from, node_id_to, query_id).await?;
             let response = coordinator.shortest_path_query().await?;
+
+            tokio::spawn(Self::send_forget_query(coordinator));
 
             Ok(Response::new(response))
         }

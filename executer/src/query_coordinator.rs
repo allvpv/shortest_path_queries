@@ -1,4 +1,5 @@
 use async_stream::AsyncStream;
+use futures::future::try_join_all;
 use futures::stream::FuturesUnordered;
 use futures::Future;
 use futures::TryFutureExt;
@@ -9,10 +10,9 @@ use tonic::Result;
 use tonic::Status;
 
 use generated::executer::QueryFinished;
-use generated::worker::request_djikstra;
-use generated::worker::response_djikstra;
 use generated::worker::worker_client::WorkerClient;
-use generated::worker::RequestDjikstra;
+use generated::worker::{request_djikstra, response_djikstra};
+use generated::worker::{ForgetQueryMessage, RequestDjikstra};
 
 use crate::executer_service::{NodeId, ShortestPathLen};
 use crate::workers_connection::Worker;
@@ -29,6 +29,7 @@ struct WorkerExtended {
     channel: WorkerClient<Channel>,
     minimal: Option<ShortestPathLen>,
     new_nodes: Vec<NewDomesticNode>,
+    is_involved: bool, // Was the worker involved in the current query?
 }
 
 impl WorkerExtended {
@@ -38,6 +39,7 @@ impl WorkerExtended {
             channel: worker.channel.clone(), // Cloning `Channel` is cheap (and unavoidable I guess)
             minimal: None,
             new_nodes: Vec::new(),
+            is_involved: false,
         }
     }
 
@@ -78,6 +80,20 @@ impl QueryCoordinator {
             .filter(|(idx, _)| *idx != current)
             .filter_map(|(_, w)| w.minimal)
             .min()
+    }
+
+    pub async fn send_forget_to_workers(&mut self) -> Result<(), Status> {
+        let query_id = self.query_id;
+        let futures = self
+            .workers
+            .iter_mut()
+            .filter(|worker| worker.is_involved)
+            .map(|worker| worker.channel.forget_query(ForgetQueryMessage { query_id }))
+            .collect::<Vec<_>>();
+
+        try_join_all(futures).await?;
+
+        Ok(())
     }
 
     pub async fn new(workers: &[Worker], from: NodeId, to: NodeId, query_id: u32) -> Result<Self> {
@@ -177,7 +193,7 @@ impl QueryCoordinator {
         }
     }
 
-    pub async fn shortest_path_query(mut self) -> Result<QueryFinished, Status> {
+    pub async fn shortest_path_query(&mut self) -> Result<QueryFinished, Status> {
         // Push initial node
         self.workers[self.first_worker_idx].push_new_domestic(self.node_id_from, 0);
 
@@ -197,6 +213,7 @@ impl QueryCoordinator {
             debug!("parsing `update_dijkstra` response from worker[idx {current}]:");
 
             self.workers[current].minimal = None;
+            self.workers[current].is_involved = true;
 
             while let Some(response) = inbound.message().await? {
                 let message = match response.message_type {
