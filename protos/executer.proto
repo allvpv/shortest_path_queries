@@ -1,10 +1,13 @@
 syntax="proto3";
+import "google/protobuf/empty.proto";
 
 package executer;
 
 // Interface exported by the executer node and exposed to end user (very simple so far).
 service Executer {
-    rpc ShortestPathQuery(QueryData) returns (QueryFinished);
+    rpc ShortestPathQuery(QueryData) returns (QueryResults);
+    rpc BacktrackPathForQuery(QueryId) returns (stream Node);
+    rpc ForgetQuery(QueryId) returns (google.protobuf.Empty);
 }
 
 message QueryData {
@@ -12,8 +15,18 @@ message QueryData {
     uint64 node_id_to = 2;
 }
 
-// TODO: Add backtracing and send the full path back
-message QueryFinished {
+message QueryResults {
+    // Not present if query was not performed (eg. node_id_from == node_id_to)
+    optional uint32 query_id = 1;
     // Not present if the path was not found
-    optional uint64 shortest_path_len = 1;
+    optional uint64 shortest_path_len = 2;
 }
+
+message QueryId {
+    uint32 query_id = 1;
+}
+
+message Node {
+    uint64 node_id = 1;
+}
+

@@ -4,16 +4,18 @@ use futures::stream::FuturesUnordered;
 use futures::Future;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
-use generated::worker::NodePointer;
 use tonic::transport::Channel;
 use tonic::Request;
 use tonic::Result;
 use tonic::Status;
 
-use generated::executer::QueryFinished;
-use generated::worker::worker_client::WorkerClient;
-use generated::worker::{request_djikstra, response_djikstra};
-use generated::worker::{ForgetQueryMessage, RequestDjikstra};
+use generated::executer;
+use generated::worker;
+
+use executer::QueryResults;
+use worker::worker_client::WorkerClient;
+use worker::{request_djikstra, response_djikstra};
+use worker::{ForgetQueryMessage, RequestDjikstra};
 
 use crate::executer_service::{NodeId, ShortestPathLen};
 use crate::workers_connection::Worker;
@@ -51,7 +53,7 @@ impl WorkerExtended {
         parent_node: Option<(NodeId, WorkerId)>,
     ) {
         let parent_node =
-            parent_node.map(|(node_id, worker_id)| NodePointer { worker_id, node_id });
+            parent_node.map(|(node_id, worker_id)| worker::NodePointer { worker_id, node_id });
 
         self.new_nodes.push(NewDomesticNode {
             node_id,
@@ -206,7 +208,7 @@ impl QueryCoordinator {
         }
     }
 
-    pub async fn shortest_path_query(&mut self) -> Result<QueryFinished, Status> {
+    pub async fn shortest_path_query(&mut self) -> Result<QueryResults, Status> {
         // Push initial node
         self.workers[self.first_worker_idx].push_new_domestic(self.node_id_from, 0, None);
 
@@ -242,8 +244,9 @@ impl QueryCoordinator {
                     MessageType::Success(s) => {
                         debug!(" -> query finished with success: {}", s.shortest_path_len);
 
-                        return Ok(QueryFinished {
+                        return Ok(QueryResults {
                             shortest_path_len: Some(s.shortest_path_len),
+                            query_id: Some(self.query_id),
                         });
                     }
 
@@ -298,8 +301,9 @@ impl QueryCoordinator {
         debug!("path was not found");
 
         // Path not found
-        return Ok(QueryFinished {
+        return Ok(QueryResults {
             shortest_path_len: None,
+            query_id: Some(self.query_id),
         });
     }
 }
