@@ -3,36 +3,30 @@ use std::pin::Pin;
 use futures::stream::Stream;
 use tonic::{Request, Response, Status};
 
+use generated::worker::request_djikstra;
 use generated::worker::worker_server::Worker;
 use generated::worker::{
-    ArePresent, ForgetQueryMessage, NodeIds, RequestDjikstra, ResponseDjikstra,
+    ArePresent, ForgetQueryMessage, NodeIds, RequestBacktrack, RequestDjikstra, ResponseBacktrack,
+    ResponseDjikstra,
 };
 
-use crate::graph_store::{IdIdxMapping, SPQGraph};
-use crate::proto_helpers;
-use crate::query_processor::QueryProcessor;
-use crate::query_processor::StepResult::{Finished, Remaining};
-use crate::query_processor_holder::QueryProcessorHolder;
+use crate::globals;
+use crate::query_realizator;
 use crate::ErrorCollection;
 
-use generated::worker::request_djikstra;
-
-#[derive(Debug)]
-pub struct WorkerService {
-    processors: QueryProcessorHolder,
-}
+pub struct WorkerService {}
 
 impl WorkerService {
-    pub fn new(graph: SPQGraph, mapping: IdIdxMapping) -> Self {
-        WorkerService {
-            processors: QueryProcessorHolder::new(graph, mapping),
-        }
+    pub fn new() -> Self {
+        WorkerService {}
     }
 }
 
-type RequestDjikstraStream = tonic::Streaming<RequestDjikstra>;
-type ResponseDjikstraStream =
+pub type RequestDjikstraStream = tonic::Streaming<RequestDjikstra>;
+pub type ResponseDjikstraStream =
     Pin<Box<dyn Stream<Item = Result<ResponseDjikstra, Status>> + Send + 'static>>;
+pub type ResponseBacktrackStream =
+    Pin<Box<dyn Stream<Item = Result<ResponseBacktrack, Status>> + Send + 'static>>;
 
 #[tonic::async_trait]
 impl Worker for WorkerService {
@@ -45,8 +39,8 @@ impl Worker for WorkerService {
             node_to_id,
         } = request.into_inner();
 
-        let node_from_present = self.processors.get_mapping().contains_key(&node_from_id);
-        let node_to_present = self.processors.get_mapping().contains_key(&node_to_id);
+        let node_from_present = globals::mapping().contains_key(&node_from_id);
+        let node_to_present = globals::mapping().contains_key(&node_to_id);
 
         Ok(Response::new(ArePresent {
             node_from_present,
@@ -55,6 +49,7 @@ impl Worker for WorkerService {
     }
 
     type UpdateDjikstraStream = ResponseDjikstraStream;
+    type GetBacktrackStream = ResponseBacktrackStream;
 
     async fn forget_query(
         &self,
@@ -62,19 +57,19 @@ impl Worker for WorkerService {
     ) -> Result<Response<()>, Status> {
         let ForgetQueryMessage { query_id } = request.into_inner();
 
-        let mut processor = self.processors.get_processor(query_id)?;
-
-        match processor {
-            Some(processor) => {
-                info!("Query {query_id} cleaned up!");
-                self.processors.forget_query(processor)?
-            }
-            None => {
-                warn!("Cannot forget query[{query_id}]. Processor does not exist");
-            }
-        }
+        debug!("forgetting query[{query_id}]");
+        globals::processor_holder().forget_query(query_id);
 
         Ok(Response::new(()))
+    }
+
+    async fn get_backtrack(
+        &self,
+        request: Request<RequestBacktrack>,
+    ) -> Result<Response<ResponseBacktrackStream>, Status> {
+        let stream = query_realizator::get_backtrack_stream(request.into_inner());
+
+        Ok(Response::new(Box::pin(stream)))
     }
 
     async fn update_djikstra(
@@ -86,8 +81,6 @@ impl Worker for WorkerService {
 
         use request_djikstra::MessageType::QueryData;
 
-        debug!("applying update");
-
         let query_data = {
             if let Some(QueryData(data)) = next_message {
                 data
@@ -96,81 +89,33 @@ impl Worker for WorkerService {
             }
         };
 
-        debug!(" -> query data: {query_data:?}");
+        debug!("got `update_djikstra` request: {query_data:?}");
 
-        let mut processor = self
-            .processors
-            .get_for_query(&query_data)
+        let processor = globals::processor_holder()
+            .get_or_create(&query_data)
             .map_err(ErrorCollection::duplicated_request)?;
 
-        processor.update_smallest_foreign(query_data.smallest_foreign_node);
+        let response = query_realizator::update_djikstra(&query_data, processor, inbound).await;
 
-        Self::apply_update(&mut processor, &mut inbound).await?;
-
-        // Move the processor in and out the task to satisfy the borrow checker
-        let (processor, result) = tokio::task::spawn_blocking(move || processor.djikstra_step())
-            .await
-            .expect("QueryProcessor djikstra_step task panicked")?;
-
-        let output: ResponseDjikstraStream = match result {
-            Finished(node_id, shortest) => {
-                info!(
-                    "finished with success (node[id {}, len: {}])",
-                    node_id, shortest
-                );
-
-                self.processors.forget_query(processor)?;
-                let message = proto_helpers::success(node_id, shortest);
-                Box::pin(futures::stream::once(async { Ok(message) }))
-            }
-            Remaining(responses) => {
-                info!("forwarding the request to the executer");
-
-                self.processors.put_back_query(processor)?;
-                let messages = responses.into_iter().map(Ok);
-                Box::pin(futures::stream::iter(messages))
-            }
-        };
-
-        Ok(Response::new(output))
-    }
-}
-
-impl WorkerService {
-    // Applies updates for this query
-    async fn apply_update(
-        processor: &mut QueryProcessor,
-        inbound: &mut RequestDjikstraStream,
-    ) -> Result<(), Status> {
-        while let Some(message) = inbound.message().await? {
-            use request_djikstra::MessageType::{NewDomesticNode, QueryData};
-
-            match message.message_type {
-                Some(NewDomesticNode(node)) => {
-                    processor.add_new_domestic_node(node.node_id, node.shortest_path_len)?;
-                }
-                Some(QueryData(_)) => return Err(ErrorCollection::duplicated_query_data()),
-                None => break,
+        match response {
+            Ok(response) => Ok(Response::new(response)),
+            Err(error) => {
+                globals::processor_holder().forget_query(query_data.query_id);
+                Err(error)
             }
         }
-
-        Ok(())
     }
 }
 
 impl ErrorCollection {
     fn wrong_first_message() -> Status {
-        Status::invalid_argument("First message in UpdateDjikstra stream must be query_id")
+        Status::invalid_argument("first message in UpdateDjikstra stream must be query_id")
     }
 
     fn duplicated_request(e: impl std::error::Error) -> Status {
         Status::invalid_argument(format!(
-            "Executer requested UpdateDjikstra, while another UpdateDjikstra on this \
-                    query was already pending: {e}"
+            "executer requested UpdateDjikstra, while another UpdateDjikstra on this \
+            query was already pending: {e}"
         ))
-    }
-
-    fn duplicated_query_data() -> Status {
-        Status::invalid_argument("Duplicated QueryData in the middle of the stream")
     }
 }

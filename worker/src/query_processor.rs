@@ -1,24 +1,32 @@
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashSet};
-use std::sync::Arc;
+use std::collections::hash_map::Entry;
+use std::collections::{BinaryHeap, HashMap};
 
 use tonic::Status;
-
-use crate::graph_store::{IdIdxMapper, IdIdxMapping, NodeId, NodeIdx, SPQGraph, ShortestPathLen};
-use crate::graph_store::{NodePointer, SomeGraphMethods, VisitedMap};
-use crate::proto_helpers;
 
 use generated::worker::request_djikstra;
 use generated::worker::ResponseDjikstra;
 use request_djikstra::QueryData;
 
+use crate::globals;
+use crate::graph_store::{IdIdxMapper, NodeId, NodeIdx, ShortestPathLen};
+use crate::graph_store::{NodePointer, SomeGraphMethods, WorkerId};
+use crate::proto_helpers;
+
 pub type QueryId = u32;
+
+#[derive(Debug, Clone, Copy)]
+pub enum NodeParent {
+    Root,
+    Domestic(NodeIdx),
+    Foreign(NodeId, WorkerId),
+}
+
+type ParentMap = HashMap<NodeId, NodeParent>;
 
 #[derive(Debug)]
 pub struct QueryProcessor {
-    graph: Arc<SPQGraph>,
-    mapping: Arc<IdIdxMapping>,
-    visited: VisitedMap,
+    parent_map: ParentMap,
     queue: BinaryHeap<QueueElement>,
     smallest_foreign: Option<ShortestPathLen>,
     final_node: NodeId,
@@ -35,16 +43,18 @@ impl QueryProcessor {
         self.query_id
     }
 
-    pub fn new(graph: Arc<SPQGraph>, mapping: Arc<IdIdxMapping>, query_data: &QueryData) -> Self {
+    pub fn new(data: &QueryData) -> Self {
         QueryProcessor {
-            graph,
-            mapping,
-            visited: HashSet::new(),
+            parent_map: ParentMap::new(),
             queue: BinaryHeap::new(),
             smallest_foreign: None,
-            query_id: query_data.query_id,
-            final_node: query_data.final_node_id,
+            query_id: data.query_id,
+            final_node: data.final_node_id,
         }
+    }
+
+    pub fn get_parent(&self, id: NodeId) -> Option<NodeParent> {
+        self.parent_map.get(&id).copied()
     }
 
     pub fn update_smallest_foreign(&mut self, smallest_foreign: Option<ShortestPathLen>) {
@@ -60,17 +70,20 @@ impl QueryProcessor {
         &mut self,
         id: NodeId,
         shortest: ShortestPathLen,
+        parent: NodeParent,
     ) -> Result<(), Status> {
-        let not_visited = self.visited.replace(id).is_none();
+        let idx = globals::mapping().get_mapping(id)?;
+        let entry = self.parent_map.entry(id);
 
-        debug!("new domestic node; node_id: {id}, len: {shortest}");
+        debug!("new domestic node[id: {id}, idx: {idx}, len: {shortest}, parent: {parent:?}]");
 
-        if not_visited {
-            let idx = self.mapping.get_mapping(id)?;
-            debug!("node (id {id}, idx {idx}) is not visited: pushing to queue");
-            self.queue.push(QueueElement { idx, shortest });
-        } else {
-            debug!("node (id {id}) was already visited");
+        match entry {
+            Entry::Occupied(_) => debug!(" -> node[id: {id}] was already visited"),
+            Entry::Vacant(entry) => {
+                debug!(" -> node[id: {id}] is not visited: pushing to queue");
+                entry.insert(parent);
+                self.queue.push(QueueElement { idx, shortest });
+            }
         }
 
         Ok(())
@@ -81,29 +94,21 @@ impl QueryProcessor {
         type RVec = Vec<ResponseDjikstra>;
         let mut responses = RVec::new();
 
-        let append_response_foreign = |responses: &mut RVec, node_id, worker_id, shortest| {
-            debug!(
-                "pushing new foreign node[id: {}, len: {}] from worker[id: {}] to response",
-                node_id, shortest, worker_id
-            );
-
-            responses.push(proto_helpers::new_foreign_node(
-                node_id, worker_id, shortest,
-            ));
-        };
+        let append_response_foreign =
+            |responses: &mut RVec, node_id, worker_id, parent_id, shortest| {
+                responses.push(proto_helpers::new_foreign_node(
+                    node_id, worker_id, parent_id, shortest,
+                ));
+            };
 
         let append_response_domestic = |responses: &mut RVec, shortest| {
-            debug!(
-                "pushing smallest domestic node[len: {}] to response",
-                shortest
-            );
-
+            debug!("pushing smallest domestic node[len: {shortest}] to response");
             responses.push(proto_helpers::domestic_smallest_node(shortest));
         };
 
         let check_success = |node_id, shortest| {
             if self.final_node == node_id {
-                debug!("success!, node: {} length: {}", node_id, shortest);
+                debug!("success: node: {node_id}, length: {shortest}");
                 Some(StepResult::Finished(node_id, shortest))
             } else {
                 None
@@ -126,16 +131,20 @@ impl QueryProcessor {
 
             let node = self.queue.pop().unwrap();
 
-            for edge in self.graph.edges(node.idx) {
+            for edge in globals::graph().edges(node.idx) {
                 let new_node_id = match edge.to {
                     NodePointer::Foreign(node_id, _) => node_id,
-                    NodePointer::Domestic(new_node_idx) => self.graph.get_node(new_node_idx).id,
+                    NodePointer::Domestic(new_node_idx) => {
+                        globals::graph().get_node(new_node_idx).id
+                    }
                 };
 
-                // Already visited.
-                if self.visited.replace(new_node_id).is_some() {
-                    continue;
-                }
+                let parent_idx = node.idx;
+
+                match self.parent_map.entry(new_node_id) {
+                    Entry::Occupied(_) => continue, // Already visited.
+                    Entry::Vacant(entry) => entry.insert(NodeParent::Domestic(parent_idx)),
+                };
 
                 let new_shortest = node.shortest + edge.weight;
 
@@ -146,10 +155,13 @@ impl QueryProcessor {
 
                 match edge.to {
                     NodePointer::Foreign(_, worker_id) => {
+                        let parent_id = globals::graph().get_node(parent_idx).id;
+
                         append_response_foreign(
                             &mut responses,
                             new_node_id,
                             worker_id,
+                            parent_id,
                             new_shortest,
                         );
 

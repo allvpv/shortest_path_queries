@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use tonic::Status;
 
@@ -27,7 +27,6 @@ pub struct NodePayload {
     pub edges: Vec<EdgePayload>,
 }
 
-pub type VisitedMap = HashSet<NodeId>;
 pub type SPQGraph = Vec<NodePayload>;
 pub type IdIdxMapping = HashMap<NodeId, NodeIdx>;
 

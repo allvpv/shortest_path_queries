@@ -4,6 +4,7 @@ use futures::stream::FuturesUnordered;
 use futures::Future;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use generated::worker::NodePointer;
 use tonic::transport::Channel;
 use tonic::Request;
 use tonic::Result;
@@ -43,10 +44,19 @@ impl WorkerExtended {
         }
     }
 
-    fn push_new_domestic(&mut self, node_id: NodeId, shortest_path_len: ShortestPathLen) {
+    fn push_new_domestic(
+        &mut self,
+        node_id: NodeId,
+        shortest_path_len: ShortestPathLen,
+        parent_node: Option<(NodeId, WorkerId)>,
+    ) {
+        let parent_node =
+            parent_node.map(|(node_id, worker_id)| NodePointer { worker_id, node_id });
+
         self.new_nodes.push(NewDomesticNode {
             node_id,
             shortest_path_len,
+            parent_node,
         });
 
         let update = self.minimal.is_none() || self.minimal.unwrap() > shortest_path_len;
@@ -198,7 +208,7 @@ impl QueryCoordinator {
 
     pub async fn shortest_path_query(&mut self) -> Result<QueryFinished, Status> {
         // Push initial node
-        self.workers[self.first_worker_idx].push_new_domestic(self.node_id_from, 0);
+        self.workers[self.first_worker_idx].push_new_domestic(self.node_id_from, 0, None);
 
         let mut next_worker = Some(self.first_worker_idx);
 
@@ -217,6 +227,7 @@ impl QueryCoordinator {
 
             self.workers[current].minimal = None;
             self.workers[current].is_involved = true;
+            let current_worker_id = self.workers[current].id;
 
             while let Some(response) = inbound.message().await? {
                 let message = match response.message_type {
@@ -239,18 +250,27 @@ impl QueryCoordinator {
                     MessageType::NewForeignNode(node) => {
                         debug!(" -> received foreign node {node:?}");
 
+                        let this_node = node.this_node.ok_or_else(|| {
+                            Status::invalid_argument(
+                                "Empty `this_node` in `NewForeignNode` message",
+                            )
+                        })?;
+
                         let worker_idx = self
                             .workers
-                            .binary_search_by_key(&node.worker_id, |w| w.id)
-                            .map_err(|_| ErrorCollection::worker_not_found(node.worker_id))?;
+                            .binary_search_by_key(&this_node.worker_id, |w| w.id)
+                            .map_err(|_| ErrorCollection::worker_not_found(this_node.worker_id))?;
 
                         debug!(
                             " -> node[id {}] belongs to worker[idx {}]",
-                            node.node_id, worker_idx
+                            this_node.node_id, worker_idx
                         );
 
-                        self.workers[worker_idx]
-                            .push_new_domestic(node.node_id, node.shortest_path_len);
+                        self.workers[worker_idx].push_new_domestic(
+                            this_node.node_id,
+                            node.shortest_path_len,
+                            Some((node.parent_node_id, current_worker_id)),
+                        );
                     }
 
                     MessageType::SmallestDomesticNode(node) => {

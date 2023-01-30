@@ -29,7 +29,7 @@ impl ExecuterService {
 
     async fn send_forget_query(mut coordinator: QueryCoordinator) {
         match coordinator.send_forget_to_workers().await {
-            Err(e) => warn!("Cannot send forget query to workers: {e}"),
+            Err(e) => warn!("Cannot send forget query to workers: {e:?}"),
             Ok(()) => (),
         }
     }

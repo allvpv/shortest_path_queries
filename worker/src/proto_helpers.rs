@@ -6,7 +6,7 @@ use generated::worker::{
         },
         NewForeignNode, SmallestDomesticNode, Success,
     },
-    ResponseDjikstra,
+    NodePointer, ResponseDjikstra,
 };
 
 use crate::graph_store::{NodeId, ShortestPathLen, WorkerId};
@@ -14,12 +14,13 @@ use crate::graph_store::{NodeId, ShortestPathLen, WorkerId};
 pub fn new_foreign_node(
     node_id: NodeId,
     worker_id: WorkerId,
+    parent_node_id: NodeId,
     shortest_path_len: ShortestPathLen,
 ) -> ResponseDjikstra {
     ResponseDjikstra {
         message_type: Some(NewForeignNodeVariant(NewForeignNode {
-            node_id,
-            worker_id,
+            this_node: Some(NodePointer { worker_id, node_id }),
+            parent_node_id,
             shortest_path_len,
         })),
     }
