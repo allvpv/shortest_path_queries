@@ -18,7 +18,7 @@ example_coordinates = [
 
 def get_path_plot(
     coords: List[Tuple[float, float]]
-) -> plotly.graph_objects._figure.Figure:
+) -> plotly.graph_objects.Figure:
     lat, lon = zip(*coords)
     fig = px.line_mapbox(
         lat=lat,
