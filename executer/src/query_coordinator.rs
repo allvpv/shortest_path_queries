@@ -12,12 +12,11 @@ use tonic::Status;
 use generated::executer;
 use generated::worker;
 
-use executer::QueryResults;
 use worker::worker_client::WorkerClient;
 use worker::{request_djikstra, response_djikstra};
 use worker::{ForgetQueryMessage, RequestDjikstra};
 
-use crate::executer_service::{NodeId, ShortestPathLen};
+use crate::queries_manager::{NodeId, ShortestPathLen};
 use crate::workers_connection::Worker;
 use crate::workers_connection::WorkerId;
 use crate::ErrorCollection;
@@ -77,11 +76,11 @@ pub struct QueryCoordinator {
     workers: Vec<WorkerExtended>,
     query_id: u32,
 
-    node_id_from: NodeId,
-    node_id_to: NodeId,
+    pub node_id_from: NodeId,
+    pub node_id_to: NodeId,
 
-    first_worker_idx: WorkerIdx,
-    last_worker_idx: WorkerIdx,
+    pub first_worker_idx: WorkerIdx,
+    pub last_worker_idx: WorkerIdx,
 }
 
 impl QueryCoordinator {
@@ -92,6 +91,10 @@ impl QueryCoordinator {
             .filter(|(idx, _)| *idx != current)
             .filter_map(|(_, w)| w.minimal)
             .min()
+    }
+
+    pub fn get_worker_id(&self, idx: WorkerIdx) -> WorkerId {
+        self.workers[idx].id
     }
 
     pub async fn send_forget_to_workers(&mut self) -> Result<(), Status> {
@@ -109,6 +112,23 @@ impl QueryCoordinator {
         try_join_all(futures).await?;
 
         Ok(())
+    }
+
+    pub async fn send_backtrack_request_to_worker(
+        &mut self,
+        worker_idx: WorkerIdx,
+        node_id: NodeId,
+    ) -> Result<tonic::Streaming<worker::ResponseBacktrack>, Status> {
+        let stream = self.workers[worker_idx]
+            .channel
+            .get_backtrack(worker::RequestBacktrack {
+                query_id: self.query_id,
+                from_node: node_id,
+            })
+            .await?
+            .into_inner();
+
+        Ok(stream)
     }
 
     pub async fn new(workers: &[Worker], from: NodeId, to: NodeId, query_id: u32) -> Result<Self> {
@@ -208,7 +228,13 @@ impl QueryCoordinator {
         }
     }
 
-    pub async fn shortest_path_query(&mut self) -> Result<QueryResults, Status> {
+    pub fn find_worker_by_id(&self, wid: WorkerId) -> Result<WorkerIdx> {
+        self.workers
+            .binary_search_by_key(&wid, |w| w.id)
+            .map_err(|_| ErrorCollection::worker_not_found(wid))
+    }
+
+    pub async fn shortest_path_query(&mut self) -> Result<Option<ShortestPathLen>, Status> {
         // Push initial node
         self.workers[self.first_worker_idx].push_new_domestic(self.node_id_from, 0, None);
 
@@ -243,11 +269,8 @@ impl QueryCoordinator {
                 match message {
                     MessageType::Success(s) => {
                         debug!(" -> query finished with success: {}", s.shortest_path_len);
-
-                        return Ok(QueryResults {
-                            shortest_path_len: Some(s.shortest_path_len),
-                            query_id: Some(self.query_id),
-                        });
+                        self.last_worker_idx = current;
+                        return Ok(Some(s.shortest_path_len));
                     }
 
                     MessageType::NewForeignNode(node) => {
@@ -259,10 +282,7 @@ impl QueryCoordinator {
                             )
                         })?;
 
-                        let worker_idx = self
-                            .workers
-                            .binary_search_by_key(&this_node.worker_id, |w| w.id)
-                            .map_err(|_| ErrorCollection::worker_not_found(this_node.worker_id))?;
+                        let worker_idx = self.find_worker_by_id(this_node.worker_id)?;
 
                         debug!(
                             " -> node[id {}] belongs to worker[idx {}]",
@@ -301,10 +321,7 @@ impl QueryCoordinator {
         debug!("path was not found");
 
         // Path not found
-        return Ok(QueryResults {
-            shortest_path_len: None,
-            query_id: Some(self.query_id),
-        });
+        return Ok(None);
     }
 }
 

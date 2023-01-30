@@ -28,5 +28,6 @@ message QueryId {
 
 message Node {
     uint64 node_id = 1;
+    uint32 worker_id = 2;
 }
 

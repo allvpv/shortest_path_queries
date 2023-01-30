@@ -52,6 +52,8 @@ pub async fn update_djikstra(
         .await
         .expect("QueryProcessor djikstra_step task panicked")?;
 
+    globals::processor_holder().put_back_query(processor);
+
     use query_processor::StepResult::{Finished, Remaining};
 
     let output = match result {
@@ -60,7 +62,6 @@ pub async fn update_djikstra(
                 "finished with success (node[id {}, len: {}])",
                 node_id, shortest
             );
-            globals::processor_holder().forget_query(data.query_id);
 
             let message = proto_helpers::success(node_id, shortest);
             let stream = futures::stream::once(async { Ok(message) });
@@ -69,7 +70,6 @@ pub async fn update_djikstra(
         }
         Remaining(responses) => {
             info!("forwarding the request to the executer");
-            globals::processor_holder().put_back_query(processor);
 
             let messages = responses.into_iter().map(Ok);
             let stream = futures::stream::iter(messages);
@@ -112,6 +112,7 @@ pub fn get_backtrack_stream(
 
             if let Err(_) = parent {
                 globals::processor_holder().put_back_query(processor);
+                warn!("cannot find parent of {current_node}");
                 parent?; // Due to the limitations of `try_stream!`
                 return;
             }
