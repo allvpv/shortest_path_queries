@@ -8,6 +8,13 @@ service Executer {
     rpc ShortestPathQuery(QueryData) returns (QueryResults);
     rpc BacktrackPathForQuery(QueryId) returns (stream Node);
     rpc ForgetQuery(QueryId) returns (google.protobuf.Empty);
+    rpc GetCoordinates(stream Node) returns (stream CoordinateResponse);
+}
+
+message NodeCoordinates {
+    uint64 node_id = 1;
+    uint32 worker_id = 2;
+    uint32 query_id = 3;
 }
 
 message QueryData {
@@ -31,3 +38,7 @@ message Node {
     uint32 worker_id = 2;
 }
 
+message CoordinateResponse {
+    double lat = 1;
+    double lon = 2;
+}

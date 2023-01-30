@@ -6,8 +6,9 @@ use futures::Stream;
 use tonic::{Result, Status};
 
 use generated::executer;
+use generated::worker;
 
-use crate::query_coordinator::QueryCoordinator;
+use crate::query_coordinator::{QueryCoordinator, WorkerExtended};
 use crate::workers_connection::Worker;
 use crate::ErrorCollection;
 
@@ -99,15 +100,15 @@ impl QueriesManager {
         async_stream::try_stream! {
             let mut coordinator = self.get_query_coordinator(query_id)?;
 
-            let last_worker_idx = coordinator.last_worker_idx;
+            yield executer::Node {
+                node_id: coordinator.node_id_to,
+                worker_id: coordinator.get_worker_id(coordinator.last_worker_idx),
+            };
+
+            let last_worker_idx = coordinator.last_reached_worker_idx.unwrap();
             let last_worker_id = coordinator.get_worker_id(last_worker_idx);
 
             let mut next_point = Some((last_worker_idx, last_worker_id, coordinator.node_id_to));
-
-            yield executer::Node {
-                node_id: coordinator.node_id_to,
-                worker_id: last_worker_id,
-            };
 
             while let Some((cur_worker_idx, cur_worker_id, current_node)) = next_point {
                 let mut inbound = coordinator
@@ -116,9 +117,9 @@ impl QueriesManager {
                 next_point = None;
 
                 while let Some(node) = inbound.message().await? {
-
                     if let Some(worker_id) = node.worker_id {
-                        let worker_idx = coordinator.find_worker_by_id(worker_id)?;
+                        let worker_idx =
+                            QueryCoordinator::find_worker_by_id(&coordinator.workers, worker_id)?;
                         next_point = Some((worker_idx, worker_id, node.node_id));
 
                         yield executer::Node {
@@ -141,6 +142,36 @@ impl QueriesManager {
         }
     }
 
+    pub fn get_coordinates_stream(
+        &'static self,
+        mut inbound: tonic::Streaming<executer::Node>,
+    ) -> impl Stream<Item = Result<executer::CoordinateResponse, Status>> + Send + 'static {
+        let mut workers: Vec<WorkerExtended> = self
+            .workers
+            .iter()
+            .map(WorkerExtended::from)
+            .collect();
+
+        async_stream::try_stream! {
+            while let Some(node) = inbound.message().await? {
+                let worker_idx = QueryCoordinator::find_worker_by_id(&workers, node.worker_id)?;
+
+                let coordinates = workers[worker_idx]
+                    .channel
+                    .get_node_coordinates(worker::RequestCoordinates {
+                        node_id: node.node_id,
+                    })
+                    .await?
+                    .into_inner();
+
+                yield executer::CoordinateResponse {
+                    lat: coordinates.lat,
+                    lon: coordinates.lon,
+                };
+            }
+        }
+    }
+
     pub async fn forget_query(&self, request: executer::QueryId) -> Result<(), Status> {
         let executer::QueryId { query_id } = request;
         let coordinator = self.get_query_coordinator(query_id)?;
@@ -157,5 +188,13 @@ impl ErrorCollection {
         Status::invalid_argument(format!(
             "Query {query_id} does not exist or some request on this query is already pending"
         ))
+    }
+
+    fn wrong_first_message() -> Status {
+        Status::invalid_argument("First message in CoordinateRequest must be query_id")
+    }
+
+    fn duplicated_query_id(query_id: QueryId) -> Status {
+        Status::invalid_argument(format!("Got duplicated query_id for query {query_id}"))
     }
 }

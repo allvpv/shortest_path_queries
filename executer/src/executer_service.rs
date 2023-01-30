@@ -10,6 +10,8 @@ use generated::executer::executer_server::Executer;
 pub struct ExecuterService {}
 
 type NodeStream = Pin<Box<dyn Stream<Item = Result<executer::Node, Status>> + Send + 'static>>;
+type CoordinatesStream =
+    Pin<Box<dyn Stream<Item = Result<executer::CoordinateResponse, Status>> + Send + 'static>>;
 
 #[tonic::async_trait]
 impl Executer for ExecuterService {
@@ -42,5 +44,16 @@ impl Executer for ExecuterService {
             .await?;
 
         Ok(Response::new(()))
+    }
+
+    type GetCoordinatesStream = CoordinatesStream;
+
+    async fn get_coordinates(
+        &self,
+        request: Request<tonic::Streaming<executer::Node>>
+    ) -> Result<Response<CoordinatesStream>, Status> {
+        let stream = globals::queries_manager().get_coordinates_stream(request.into_inner());
+
+        Ok(Response::new(Box::pin(stream) as CoordinatesStream))
     }
 }

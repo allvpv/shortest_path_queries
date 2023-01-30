@@ -5,6 +5,14 @@ from typing import ClassVar as _ClassVar, Optional as _Optional
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class CoordinateResponse(_message.Message):
+    __slots__ = ["lat", "lon"]
+    LAT_FIELD_NUMBER: _ClassVar[int]
+    LON_FIELD_NUMBER: _ClassVar[int]
+    lat: float
+    lon: float
+    def __init__(self, lat: _Optional[float] = ..., lon: _Optional[float] = ...) -> None: ...
+
 class Node(_message.Message):
     __slots__ = ["node_id", "worker_id"]
     NODE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -12,6 +20,16 @@ class Node(_message.Message):
     node_id: int
     worker_id: int
     def __init__(self, node_id: _Optional[int] = ..., worker_id: _Optional[int] = ...) -> None: ...
+
+class NodeCoordinates(_message.Message):
+    __slots__ = ["node_id", "query_id", "worker_id"]
+    NODE_ID_FIELD_NUMBER: _ClassVar[int]
+    QUERY_ID_FIELD_NUMBER: _ClassVar[int]
+    WORKER_ID_FIELD_NUMBER: _ClassVar[int]
+    node_id: int
+    query_id: int
+    worker_id: int
+    def __init__(self, node_id: _Optional[int] = ..., worker_id: _Optional[int] = ..., query_id: _Optional[int] = ...) -> None: ...
 
 class QueryData(_message.Message):
     __slots__ = ["node_id_from", "node_id_to"]

@@ -26,19 +26,30 @@ def get_query(stub, node_from, node_to):
     else:
         print("Path not found")
 
-
 def forget_query(stub, query_id):
     print("Sending forget query {query_id}")
     resp = stub.ForgetQuery(executer_pb2.QueryId(query_id=query_id))
     print("Query forgetten!")
 
-def backtrack_query(stub, query_id):
+def backtrack_query(stub, query_id, nodes):
     print(f"Sending backtrack query {query_id}")
     resp = stub.BacktrackPathForQuery(executer_pb2.QueryId(query_id=query_id))
 
     for node in resp:
+        nodes.append(node)
         print("Node on path: {} [Worker: {}]".format(node.node_id, node.worker_id))
 
+def get_coords(stub, query_id, nodes):
+    print(f"Sending get coords stream {query_id} for nodes obtained ")
+
+    def request_iterator():
+        for node in nodes:
+            yield node
+
+    resp = stub.GetCoordinates(request_iterator())
+
+    for coords in resp:
+        print("Node has coordinates: {}, {}".format(coords.lat, coords.lon))
 
 def spawn_partitioner(graph_filepath, listening_p, n_partitions, log_file):
     args = [sys.executable, "../partitioner/main.py",
@@ -49,7 +60,7 @@ def spawn_partitioner(graph_filepath, listening_p, n_partitions, log_file):
     return subprocess.Popen(args, stdout = log_file, stderr = log_file)
 
 def spawn_executer(listening_p, manager_p, log_file):
-    args = ["bazel", "run", "//executer"]
+    args = ["bazel", "run", "//executer:executer_bin"]
 
     env = dict(os.environ, RUST_LOG='executer=debug', PARTITIONER_IP="http://192.168.0.80:49998")
     return subprocess.Popen(args, env = env, stdout = log_file, stderr = log_file)
@@ -81,7 +92,7 @@ def main():
     # Rebuild
     #
     print("(Re)building executer and worker")
-    subprocess.run(["bazel", "build", "//executer"])
+    subprocess.run(["bazel", "build", "//executer:executer_bin"])
     subprocess.run(["bazel", "build", "//worker"])
     print("Building finished")
 
@@ -144,6 +155,9 @@ def main():
         # Reading requests from stdin
         #
         print("Receiving commands")
+
+        last_nodes = []
+
         for line in sys.stdin:
             if 'quit' == line.strip():
                 break
@@ -200,8 +214,28 @@ def main():
                     print("argument for forget must be integer")
                     continue
 
+                last_nodes = []
+
                 try:
-                    backtrack_query(stub, query_id)
+                    backtrack_query(stub, query_id, last_nodes)
+                except Exception as err:
+                    print(err)
+
+            elif line.startswith('get_coords'):
+                args = list(filter(None, line.split(' ')))
+
+                if len(args) != 2:
+                    print("bad arguments; one required: `query_id`")
+                    continue
+
+                try:
+                    query_id = int(args[1])
+                except ValueError:
+                    print("argument for forget must be integer")
+                    continue
+
+                try:
+                    get_coords(stub, query_id, last_nodes)
                 except Exception as err:
                     print(err)
     except:

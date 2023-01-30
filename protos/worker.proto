@@ -9,6 +9,16 @@ service Worker {
     rpc UpdateDjikstra(stream RequestDjikstra) returns (stream ResponseDjikstra);
     rpc ForgetQuery(ForgetQueryMessage) returns (google.protobuf.Empty);
     rpc GetBacktrack(RequestBacktrack) returns (stream ResponseBacktrack);
+    rpc GetNodeCoordinates(RequestCoordinates) returns (Coordinates);
+}
+
+message RequestCoordinates {
+    uint64 node_id = 1;
+}
+
+message Coordinates {
+    double lat = 1;
+    double lon = 2;
 }
 
 message NodeIds {

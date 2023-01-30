@@ -49,10 +49,14 @@ impl GraphReceiver {
 
             match response.graph_element {
                 Some(Nodes(node)) => {
-                    let node_idx = graph.add_node(node.node_id);
+                    let coords = (node.lat, node.lon);
+                    let node_idx = graph.add_node(node.node_id, coords);
                     mapping.insert(node.node_id, node_idx);
 
-                    debug!("got node[id: {}, idx: {}]", node.node_id, node_idx)
+                    debug!(
+                        "got node[id: {}, idx: {}, lat: {}, lon: {}]",
+                        node.node_id, node_idx, node.lat, node.lon
+                    )
                 }
                 Some(Edges(edge)) => {
                     let node_from_idx = mapping.get_mapping(edge.node_from_id)?;

@@ -26,16 +26,16 @@ use response_djikstra::MessageType;
 
 type WorkerIdx = usize;
 
-struct WorkerExtended {
+pub struct WorkerExtended {
     id: WorkerId,
-    channel: WorkerClient<Channel>,
+    pub channel: WorkerClient<Channel>,
     minimal: Option<ShortestPathLen>,
     new_nodes: Vec<NewDomesticNode>,
     is_involved: bool, // Was the worker involved in the current query?
 }
 
 impl WorkerExtended {
-    fn from(worker: &Worker) -> Self {
+    pub fn from(worker: &Worker) -> Self {
         WorkerExtended {
             id: worker.id,
             channel: worker.channel.clone(), // Cloning `Channel` is cheap (and unavoidable I guess)
@@ -73,7 +73,7 @@ impl WorkerExtended {
 }
 
 pub struct QueryCoordinator {
-    workers: Vec<WorkerExtended>,
+    pub workers: Vec<WorkerExtended>,
     query_id: u32,
 
     pub node_id_from: NodeId,
@@ -81,6 +81,7 @@ pub struct QueryCoordinator {
 
     pub first_worker_idx: WorkerIdx,
     pub last_worker_idx: WorkerIdx,
+    pub last_reached_worker_idx: Option<WorkerIdx>,
 }
 
 impl QueryCoordinator {
@@ -128,6 +129,7 @@ impl QueryCoordinator {
             .await?
             .into_inner();
 
+
         Ok(stream)
     }
 
@@ -143,6 +145,7 @@ impl QueryCoordinator {
             node_id_to: to,
             first_worker_idx: worker_from,
             last_worker_idx: worker_to,
+            last_reached_worker_idx: None,
         })
     }
 
@@ -228,8 +231,8 @@ impl QueryCoordinator {
         }
     }
 
-    pub fn find_worker_by_id(&self, wid: WorkerId) -> Result<WorkerIdx> {
-        self.workers
+    pub fn find_worker_by_id(workers: &[WorkerExtended], wid: WorkerId) -> Result<WorkerIdx> {
+        workers
             .binary_search_by_key(&wid, |w| w.id)
             .map_err(|_| ErrorCollection::worker_not_found(wid))
     }
@@ -268,8 +271,7 @@ impl QueryCoordinator {
 
                 match message {
                     MessageType::Success(s) => {
-                        debug!(" -> query finished with success: {}", s.shortest_path_len);
-                        self.last_worker_idx = current;
+                        self.last_reached_worker_idx = Some(current);
                         return Ok(Some(s.shortest_path_len));
                     }
 
@@ -282,7 +284,8 @@ impl QueryCoordinator {
                             )
                         })?;
 
-                        let worker_idx = self.find_worker_by_id(this_node.worker_id)?;
+                        let worker_idx =
+                            Self::find_worker_by_id(&self.workers, this_node.worker_id)?;
 
                         debug!(
                             " -> node[id {}] belongs to worker[idx {}]",
