@@ -1,24 +1,37 @@
 load("@rules_rust//rust:defs.bzl", "rust_clippy")
 load("@io_bazel_rules_docker//rust:image.bzl", "rust_image")
+load("@rules_rust//rust:defs.bzl", "rust_clippy", "rust_binary")
+
+deps = [
+  "//protos/generated_rust:generated",
+  "@crates//:tonic",
+  "@crates//:prost",
+  "@crates//:futures",
+  "@crates//:tokio",
+  "@crates//:clap",
+  "@crates//:tracing",
+  "@crates//:tracing-subscriber",
+  "@crates//:async-stream",
+  "@crates//:log",
+  "@crates//:pretty_env_logger",
+  "@crates//:local-ip-address",
+  "@crates//:once_cell",
+]
+
+srcs = glob(["src/*.rs"]);
 
 rust_image(
     name = "executer",
-    srcs = glob(["src/*.rs"]),
+    srcs = srcs,
     edition = "2021",
-    deps = [
-        "//protos/generated_rust:generated",
-        "@crates//:tonic",
-        "@crates//:prost",
-        "@crates//:futures",
-        "@crates//:tokio",
-        "@crates//:clap",
-        "@crates//:tracing",
-        "@crates//:tracing-subscriber",
-        "@crates//:async-stream",
-        "@crates//:log",
-        "@crates//:pretty_env_logger",
-        "@crates//:local-ip-address",
-    ],
+    deps = deps,
+)
+
+rust_binary(
+    name = "executer_bin",
+    srcs = srcs,
+    edition = "2021",
+    deps = deps,
 )
 
 rust_clippy(

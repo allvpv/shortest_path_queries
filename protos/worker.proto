@@ -8,6 +8,7 @@ service Worker {
     rpc AreNodesPresent(NodeIds) returns (ArePresent);
     rpc UpdateDjikstra(stream RequestDjikstra) returns (stream ResponseDjikstra);
     rpc ForgetQuery(ForgetQueryMessage) returns (google.protobuf.Empty);
+    rpc GetBacktrack(RequestBacktrack) returns (stream ResponseBacktrack);
 }
 
 message NodeIds {
@@ -20,9 +21,26 @@ message ArePresent {
     bool node_to_present = 2;
 }
 
+
+message RequestBacktrack {
+    uint32 query_id = 1;
+    uint64 from_node = 2;
+}
+
+message ResponseBacktrack {
+    uint64 node_id = 1;
+    optional uint32 worker_id = 2;
+}
+
 // Message sent to all involved workers when the query is finished
 message ForgetQueryMessage {
     uint32 query_id = 1;
+}
+
+
+message NodePointer {
+    uint32 worker_id = 1;
+    uint64 node_id = 2;
 }
 
 message RequestDjikstra {
@@ -35,6 +53,7 @@ message RequestDjikstra {
     message NewDomesticNode {
         uint64 node_id = 1;
         uint64 shortest_path_len = 2;
+        NodePointer parent_node = 3;
     }
 
     // First message in the stream must be `query_data`. Message
@@ -52,9 +71,9 @@ message ResponseDjikstra {
     }
 
     message NewForeignNode {
-        uint64 node_id = 1;
-        uint32 worker_id = 2;
-        uint64 shortest_path_len = 3;
+        NodePointer this_node = 1;
+        uint64 shortest_path_len = 2;
+        uint64 parent_node_id = 3;
     }
 
     message SmallestDomesticNode {

@@ -1,21 +1,23 @@
-load("@rules_rust//rust:defs.bzl", "rust_clippy")
-load("@io_bazel_rules_docker//rust:image.bzl", "rust_image")
+load("@rules_rust//rust:defs.bzl", "rust_clippy", "rust_binary")
 
-rust_image(
+rust_binary(
     name = "worker",
     srcs = glob(["src/*.rs"]),
     edition = "2021",
     deps = [
         "//protos/generated_rust:generated",
         "@crates//:tonic",
+        "@crates//:async-stream",
         "@crates//:prost",
         "@crates//:futures",
         "@crates//:num_cpus",
         "@crates//:tokio",
+        "@crates//:tokio-stream",
         "@crates//:clap",
         "@crates//:log",
         "@crates//:pretty_env_logger",
         "@crates//:local-ip-address",
+        "@crates//:once_cell",
     ],
 )
 

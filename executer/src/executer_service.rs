@@ -1,66 +1,46 @@
-use std::sync::atomic::{AtomicU32, Ordering};
-use tonic::{Request, Response, Result};
+use std::pin::Pin;
+use futures::Stream;
+use tonic::{Request, Response, Result, Status};
 
+use crate::globals;
+
+use generated::executer;
 use generated::executer::executer_server::Executer;
-use generated::executer::{QueryData, QueryFinished};
 
-use crate::query_coordinator::QueryCoordinator;
-use crate::workers_connection::Worker;
+pub struct ExecuterService {}
 
-pub type NodeId = u64;
-pub type ShortestPathLen = u64;
-
-pub struct ExecuterService {
-    workers: Vec<Worker>,
-    query_id_counter: AtomicU32,
-}
-
-impl ExecuterService {
-    pub fn new(workers: Vec<Worker>) -> Self {
-        ExecuterService {
-            workers,
-            query_id_counter: AtomicU32::new(0),
-        }
-    }
-
-    fn get_new_query_id(&self) -> u32 {
-        self.query_id_counter.fetch_add(1, Ordering::Relaxed)
-    }
-
-    async fn send_forget_query(mut coordinator: QueryCoordinator) {
-        match coordinator.send_forget_to_workers().await {
-            Err(e) => warn!("Cannot send forget query to workers: {e}"),
-            Ok(()) => (),
-        }
-    }
-}
+type NodeStream = Pin<Box<dyn Stream<Item = Result<executer::Node, Status>> + Send + 'static>>;
 
 #[tonic::async_trait]
 impl Executer for ExecuterService {
     async fn shortest_path_query(
         &self,
-        request: Request<QueryData>,
-    ) -> Result<Response<QueryFinished>> {
-        let QueryData {
-            node_id_from,
-            node_id_to,
-        } = request.into_inner();
+        request: Request<executer::QueryData>,
+    ) -> Result<Response<executer::QueryResults>> {
+        let response = globals::queries_manager()
+            .shortest_path_query(request.into_inner())
+            .await?;
 
-        let query_id = self.get_new_query_id();
-        info!("`query_id` is: {query_id}");
+        Ok(Response::new(response))
+    }
 
-        if node_id_from == node_id_to {
-            Ok(Response::new(QueryFinished {
-                shortest_path_len: Some(0),
-            }))
-        } else {
-            let mut coordinator =
-                QueryCoordinator::new(&self.workers, node_id_from, node_id_to, query_id).await?;
-            let response = coordinator.shortest_path_query().await?;
+    type BacktrackPathForQueryStream = NodeStream;
 
-            tokio::spawn(Self::send_forget_query(coordinator));
+    async fn backtrack_path_for_query(
+        &self,
+        request: Request<executer::QueryId>,
+    ) -> Result<Response<NodeStream>> {
+        let query_id = request.into_inner().query_id;
+        let stream = globals::queries_manager().get_backtrack_stream(query_id);
 
-            Ok(Response::new(response))
-        }
+        Ok(Response::new(Box::pin(stream) as NodeStream))
+    }
+
+    async fn forget_query(&self, request: Request<executer::QueryId>) -> Result<Response<()>> {
+        globals::queries_manager()
+            .forget_query(request.into_inner())
+            .await?;
+
+        Ok(Response::new(()))
     }
 }

@@ -20,4 +20,5 @@ proto_library(
     name = "executer",
     srcs = [":executer.proto"],
     visibility = ["//visibility:public"],
+    deps = ["@com_google_protobuf//:empty_proto"],
 )

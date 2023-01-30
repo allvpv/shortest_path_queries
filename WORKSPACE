@@ -131,6 +131,7 @@ crates_repository(
             version = "1.23",
             features = ["rt-multi-thread", "macros", "sync", "time"],
         ),
+        "tokio-stream": crate.spec(version = "0.1"),
         "clap": crate.spec(
             version = "4.0",
             features = ["derive"],
@@ -140,7 +141,8 @@ crates_repository(
         "async-stream": crate.spec(version = "0.3"),
         "log": crate.spec(version = "0.4"),
         "pretty_env_logger": crate.spec(version = "0.4"),
-        "local-ip-address": crate.spec(version = "0.5.1")
+        "local-ip-address": crate.spec(version = "0.5.1"),
+        "once_cell": crate.spec(version = "1.17"),
     },
     splicing_config = splicing_config(
         resolver_version = "2",

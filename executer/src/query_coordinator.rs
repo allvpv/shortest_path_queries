@@ -9,12 +9,14 @@ use tonic::Request;
 use tonic::Result;
 use tonic::Status;
 
-use generated::executer::QueryFinished;
-use generated::worker::worker_client::WorkerClient;
-use generated::worker::{request_djikstra, response_djikstra};
-use generated::worker::{ForgetQueryMessage, RequestDjikstra};
+use generated::executer;
+use generated::worker;
 
-use crate::executer_service::{NodeId, ShortestPathLen};
+use worker::worker_client::WorkerClient;
+use worker::{request_djikstra, response_djikstra};
+use worker::{ForgetQueryMessage, RequestDjikstra};
+
+use crate::queries_manager::{NodeId, ShortestPathLen};
 use crate::workers_connection::Worker;
 use crate::workers_connection::WorkerId;
 use crate::ErrorCollection;
@@ -43,10 +45,19 @@ impl WorkerExtended {
         }
     }
 
-    fn push_new_domestic(&mut self, node_id: NodeId, shortest_path_len: ShortestPathLen) {
+    fn push_new_domestic(
+        &mut self,
+        node_id: NodeId,
+        shortest_path_len: ShortestPathLen,
+        parent_node: Option<(NodeId, WorkerId)>,
+    ) {
+        let parent_node =
+            parent_node.map(|(node_id, worker_id)| worker::NodePointer { worker_id, node_id });
+
         self.new_nodes.push(NewDomesticNode {
             node_id,
             shortest_path_len,
+            parent_node,
         });
 
         let update = self.minimal.is_none() || self.minimal.unwrap() > shortest_path_len;
@@ -65,11 +76,11 @@ pub struct QueryCoordinator {
     workers: Vec<WorkerExtended>,
     query_id: u32,
 
-    node_id_from: NodeId,
-    node_id_to: NodeId,
+    pub node_id_from: NodeId,
+    pub node_id_to: NodeId,
 
-    first_worker_idx: WorkerIdx,
-    last_worker_idx: WorkerIdx,
+    pub first_worker_idx: WorkerIdx,
+    pub last_worker_idx: WorkerIdx,
 }
 
 impl QueryCoordinator {
@@ -80,6 +91,10 @@ impl QueryCoordinator {
             .filter(|(idx, _)| *idx != current)
             .filter_map(|(_, w)| w.minimal)
             .min()
+    }
+
+    pub fn get_worker_id(&self, idx: WorkerIdx) -> WorkerId {
+        self.workers[idx].id
     }
 
     pub async fn send_forget_to_workers(&mut self) -> Result<(), Status> {
@@ -97,6 +112,23 @@ impl QueryCoordinator {
         try_join_all(futures).await?;
 
         Ok(())
+    }
+
+    pub async fn send_backtrack_request_to_worker(
+        &mut self,
+        worker_idx: WorkerIdx,
+        node_id: NodeId,
+    ) -> Result<tonic::Streaming<worker::ResponseBacktrack>, Status> {
+        let stream = self.workers[worker_idx]
+            .channel
+            .get_backtrack(worker::RequestBacktrack {
+                query_id: self.query_id,
+                from_node: node_id,
+            })
+            .await?
+            .into_inner();
+
+        Ok(stream)
     }
 
     pub async fn new(workers: &[Worker], from: NodeId, to: NodeId, query_id: u32) -> Result<Self> {
@@ -196,9 +228,15 @@ impl QueryCoordinator {
         }
     }
 
-    pub async fn shortest_path_query(&mut self) -> Result<QueryFinished, Status> {
+    pub fn find_worker_by_id(&self, wid: WorkerId) -> Result<WorkerIdx> {
+        self.workers
+            .binary_search_by_key(&wid, |w| w.id)
+            .map_err(|_| ErrorCollection::worker_not_found(wid))
+    }
+
+    pub async fn shortest_path_query(&mut self) -> Result<Option<ShortestPathLen>, Status> {
         // Push initial node
-        self.workers[self.first_worker_idx].push_new_domestic(self.node_id_from, 0);
+        self.workers[self.first_worker_idx].push_new_domestic(self.node_id_from, 0, None);
 
         let mut next_worker = Some(self.first_worker_idx);
 
@@ -217,6 +255,7 @@ impl QueryCoordinator {
 
             self.workers[current].minimal = None;
             self.workers[current].is_involved = true;
+            let current_worker_id = self.workers[current].id;
 
             while let Some(response) = inbound.message().await? {
                 let message = match response.message_type {
@@ -230,27 +269,31 @@ impl QueryCoordinator {
                 match message {
                     MessageType::Success(s) => {
                         debug!(" -> query finished with success: {}", s.shortest_path_len);
-
-                        return Ok(QueryFinished {
-                            shortest_path_len: Some(s.shortest_path_len),
-                        });
+                        self.last_worker_idx = current;
+                        return Ok(Some(s.shortest_path_len));
                     }
 
                     MessageType::NewForeignNode(node) => {
                         debug!(" -> received foreign node {node:?}");
 
-                        let worker_idx = self
-                            .workers
-                            .binary_search_by_key(&node.worker_id, |w| w.id)
-                            .map_err(|_| ErrorCollection::worker_not_found(node.worker_id))?;
+                        let this_node = node.this_node.ok_or_else(|| {
+                            Status::invalid_argument(
+                                "Empty `this_node` in `NewForeignNode` message",
+                            )
+                        })?;
+
+                        let worker_idx = self.find_worker_by_id(this_node.worker_id)?;
 
                         debug!(
                             " -> node[id {}] belongs to worker[idx {}]",
-                            node.node_id, worker_idx
+                            this_node.node_id, worker_idx
                         );
 
-                        self.workers[worker_idx]
-                            .push_new_domestic(node.node_id, node.shortest_path_len);
+                        self.workers[worker_idx].push_new_domestic(
+                            this_node.node_id,
+                            node.shortest_path_len,
+                            Some((node.parent_node_id, current_worker_id)),
+                        );
                     }
 
                     MessageType::SmallestDomesticNode(node) => {
@@ -278,9 +321,7 @@ impl QueryCoordinator {
         debug!("path was not found");
 
         // Path not found
-        return Ok(QueryFinished {
-            shortest_path_len: None,
-        });
+        return Ok(None);
     }
 }
 

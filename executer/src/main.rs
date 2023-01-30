@@ -3,6 +3,8 @@ extern crate pretty_env_logger;
 extern crate log;
 
 mod executer_service;
+mod globals;
+mod queries_manager;
 mod query_coordinator;
 mod workers_connection;
 
@@ -11,11 +13,13 @@ use std::net::ToSocketAddrs;
 
 use local_ip_address::local_ip;
 use tonic::transport::Server;
+use tonic::Status;
 
 use generated::executer::executer_server::ExecuterServer;
 use generated::manager::manager_service_client::ManagerServiceClient;
 
 use crate::executer_service::ExecuterService;
+use crate::queries_manager::QueriesManager;
 
 pub struct ErrorCollection {}
 
@@ -31,8 +35,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addresses = workers_connection::get_sorted_workers_addresses(&mut manager).await?;
     let workers = workers_connection::connect_to_all_workers(addresses).await?;
 
+    globals::QUERIES_MANAGER
+        .set(QueriesManager::new(workers))
+        .map_err(|_| Status::internal("Cannot set global QUERIES_MANAGER"))?;
+
     info!("creating the server");
-    let service = ExecuterService::new(workers);
+    let service = ExecuterService {};
     let server = ExecuterServer::new(service);
 
     let my_local_ip = local_ip()?;
