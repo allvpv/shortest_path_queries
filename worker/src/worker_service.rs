@@ -7,10 +7,11 @@ use generated::worker::request_djikstra;
 use generated::worker::worker_server::Worker;
 use generated::worker::{
     ArePresent, ForgetQueryMessage, NodeIds, RequestBacktrack, RequestDjikstra, ResponseBacktrack,
-    ResponseDjikstra,
+    ResponseDjikstra, RequestCoordinates, Coordinates
 };
 
 use crate::globals;
+use crate::graph_store::{IdIdxMapper, SomeGraphMethods};
 use crate::query_realizator;
 use crate::ErrorCollection;
 
@@ -48,9 +49,6 @@ impl Worker for WorkerService {
         }))
     }
 
-    type UpdateDjikstraStream = ResponseDjikstraStream;
-    type GetBacktrackStream = ResponseBacktrackStream;
-
     async fn forget_query(
         &self,
         request: Request<ForgetQueryMessage>,
@@ -63,6 +61,8 @@ impl Worker for WorkerService {
         Ok(Response::new(()))
     }
 
+    type GetBacktrackStream = ResponseBacktrackStream;
+
     async fn get_backtrack(
         &self,
         request: Request<RequestBacktrack>,
@@ -71,6 +71,8 @@ impl Worker for WorkerService {
 
         Ok(Response::new(Box::pin(stream)))
     }
+
+    type UpdateDjikstraStream = ResponseDjikstraStream;
 
     async fn update_djikstra(
         &self,
@@ -104,6 +106,18 @@ impl Worker for WorkerService {
                 Err(error)
             }
         }
+    }
+
+    async fn get_node_coordinates(
+        &self,
+        request: Request<RequestCoordinates>,
+    ) -> Result<Response<Coordinates>, Status> {
+        let request  = request.into_inner();
+
+        let node_idx = globals::mapping().get_mapping(request.node_id)?;
+        let (lat, lon) = globals::graph().get_node(node_idx).coords;
+
+        Ok(Response::new(Coordinates { lat, lon }))
     }
 }
 

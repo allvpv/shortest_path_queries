@@ -14,21 +14,25 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x65xecuter.proto\x12\x08\x65xecuter\x1a\x1bgoogle/protobuf/empty.proto\"5\n\tQueryData\x12\x14\n\x0cnode_id_from\x18\x01 \x01(\x04\x12\x12\n\nnode_id_to\x18\x02 \x01(\x04\"h\n\x0cQueryResults\x12\x15\n\x08query_id\x18\x01 \x01(\rH\x00\x88\x01\x01\x12\x1e\n\x11shortest_path_len\x18\x02 \x01(\x04H\x01\x88\x01\x01\x42\x0b\n\t_query_idB\x14\n\x12_shortest_path_len\"\x1b\n\x07QueryId\x12\x10\n\x08query_id\x18\x01 \x01(\r\"*\n\x04Node\x12\x0f\n\x07node_id\x18\x01 \x01(\x04\x12\x11\n\tworker_id\x18\x02 \x01(\r2\xc4\x01\n\x08\x45xecuter\x12@\n\x11ShortestPathQuery\x12\x13.executer.QueryData\x1a\x16.executer.QueryResults\x12<\n\x15\x42\x61\x63ktrackPathForQuery\x12\x11.executer.QueryId\x1a\x0e.executer.Node0\x01\x12\x38\n\x0b\x46orgetQuery\x12\x11.executer.QueryId\x1a\x16.google.protobuf.Emptyb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x65xecuter.proto\x12\x08\x65xecuter\x1a\x1bgoogle/protobuf/empty.proto\"G\n\x0fNodeCoordinates\x12\x0f\n\x07node_id\x18\x01 \x01(\x04\x12\x11\n\tworker_id\x18\x02 \x01(\r\x12\x10\n\x08query_id\x18\x03 \x01(\r\"5\n\tQueryData\x12\x14\n\x0cnode_id_from\x18\x01 \x01(\x04\x12\x12\n\nnode_id_to\x18\x02 \x01(\x04\"h\n\x0cQueryResults\x12\x15\n\x08query_id\x18\x01 \x01(\rH\x00\x88\x01\x01\x12\x1e\n\x11shortest_path_len\x18\x02 \x01(\x04H\x01\x88\x01\x01\x42\x0b\n\t_query_idB\x14\n\x12_shortest_path_len\"\x1b\n\x07QueryId\x12\x10\n\x08query_id\x18\x01 \x01(\r\"*\n\x04Node\x12\x0f\n\x07node_id\x18\x01 \x01(\x04\x12\x11\n\tworker_id\x18\x02 \x01(\r\".\n\x12\x43oordinateResponse\x12\x0b\n\x03lat\x18\x01 \x01(\x01\x12\x0b\n\x03lon\x18\x02 \x01(\x01\x32\x88\x02\n\x08\x45xecuter\x12@\n\x11ShortestPathQuery\x12\x13.executer.QueryData\x1a\x16.executer.QueryResults\x12<\n\x15\x42\x61\x63ktrackPathForQuery\x12\x11.executer.QueryId\x1a\x0e.executer.Node0\x01\x12\x38\n\x0b\x46orgetQuery\x12\x11.executer.QueryId\x1a\x16.google.protobuf.Empty\x12\x42\n\x0eGetCoordinates\x12\x0e.executer.Node\x1a\x1c.executer.CoordinateResponse(\x01\x30\x01\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'executer_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _QUERYDATA._serialized_start=57
-  _QUERYDATA._serialized_end=110
-  _QUERYRESULTS._serialized_start=112
-  _QUERYRESULTS._serialized_end=216
-  _QUERYID._serialized_start=218
-  _QUERYID._serialized_end=245
-  _NODE._serialized_start=247
-  _NODE._serialized_end=289
-  _EXECUTER._serialized_start=292
-  _EXECUTER._serialized_end=488
+  _NODECOORDINATES._serialized_start=57
+  _NODECOORDINATES._serialized_end=128
+  _QUERYDATA._serialized_start=130
+  _QUERYDATA._serialized_end=183
+  _QUERYRESULTS._serialized_start=185
+  _QUERYRESULTS._serialized_end=289
+  _QUERYID._serialized_start=291
+  _QUERYID._serialized_end=318
+  _NODE._serialized_start=320
+  _NODE._serialized_end=362
+  _COORDINATERESPONSE._serialized_start=364
+  _COORDINATERESPONSE._serialized_end=410
+  _EXECUTER._serialized_start=413
+  _EXECUTER._serialized_end=677
 # @@protoc_insertion_point(module_scope)

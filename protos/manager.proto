@@ -33,6 +33,8 @@ message WorkersList {
 
 message Node {
     uint64 node_id = 1;
+    double lat = 2;
+    double lon = 3;
 }
 
 message Edge {

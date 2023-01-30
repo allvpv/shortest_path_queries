@@ -34,3 +34,5 @@ spec:
               value: http://partitioner:49998
             - name: RUST_LOG
               value: "worker=debug"
+            - name: MY_PORT
+              value: 50000

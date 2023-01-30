@@ -24,6 +24,7 @@ pub struct EdgePayload {
 #[derive(Debug)]
 pub struct NodePayload {
     pub id: NodeId,
+    pub coords: (f64, f64),
     pub edges: Vec<EdgePayload>,
 }
 
@@ -46,7 +47,7 @@ pub trait SomeGraphMethods {
     fn get_node(&self, node: NodeIdx) -> &NodePayload;
     fn get_node_mut(&mut self, node: NodeIdx) -> &mut NodePayload;
     fn edges(&self, node: NodeIdx) -> std::slice::Iter<'_, EdgePayload>;
-    fn add_node(&mut self, node_id: NodeId) -> NodeIdx;
+    fn add_node(&mut self, node_id: NodeId, coords: (f64, f64)) -> NodeIdx;
     fn add_edge(&mut self, from: NodeIdx, to: NodePointer, weight: EdgeWeight);
 }
 
@@ -63,11 +64,12 @@ impl SomeGraphMethods for SPQGraph {
         self.get_node(node).edges.iter()
     }
 
-    fn add_node(&mut self, node_id: NodeId) -> NodeIdx {
+    fn add_node(&mut self, node_id: NodeId, coords: (f64, f64)) -> NodeIdx {
         let node_idx = self.len() as NodeIdx;
 
         self.push(NodePayload {
             id: node_id,
+            coords,
             edges: Vec::new(),
         });
 

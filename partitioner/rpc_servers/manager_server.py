@@ -110,11 +110,13 @@ class ManagerServiceServicer(manager_pb2_grpc.ManagerServiceServicer):
             with self.workers_lock:
                 partition_ix = request.worker_id - 1
             node_cache = self.parser.get_partition_nodes(self.partitions, partition_ix)
-            for i, node_id in enumerate(node_cache):
-                node_info = manager__pb2.Node(node_id=node_id)
-                yield manager__pb2.GraphPiece(
-                    nodes=node_info
+            for i, (node_id, (lat, lon)) in enumerate(node_cache.items()):
+                node_info = manager__pb2.Node(
+                    node_id=node_id,
+                    lat=lat,
+                    lon=lon,
                 )
+                yield manager__pb2.GraphPiece(nodes=node_info)
             for edge in send_partition_edges(node_cache, self.partitions.copy(), self.parser):
                 yield edge
         except Exception as e:

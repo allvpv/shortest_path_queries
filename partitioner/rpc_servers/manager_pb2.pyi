@@ -27,10 +27,14 @@ class GraphPiece(_message.Message):
     def __init__(self, nodes: _Optional[_Union[Node, _Mapping]] = ..., edges: _Optional[_Union[Edge, _Mapping]] = ...) -> None: ...
 
 class Node(_message.Message):
-    __slots__ = ["node_id"]
+    __slots__ = ["lat", "lon", "node_id"]
+    LAT_FIELD_NUMBER: _ClassVar[int]
+    LON_FIELD_NUMBER: _ClassVar[int]
     NODE_ID_FIELD_NUMBER: _ClassVar[int]
+    lat: float
+    lon: float
     node_id: int
-    def __init__(self, node_id: _Optional[int] = ...) -> None: ...
+    def __init__(self, node_id: _Optional[int] = ..., lat: _Optional[float] = ..., lon: _Optional[float] = ...) -> None: ...
 
 class WorkerMetadata(_message.Message):
     __slots__ = ["worker_id"]
