@@ -126,8 +126,9 @@ pub fn get_backtrack_stream(
                     None
                 }
                 NodeParent::Domestic(idx) => {
-                    yield ResponseBacktrack { node_id: current_node, worker_id: None };
-                    Some(map_idx_to_id(idx))
+                    let id = map_idx_to_id(idx);
+                    yield ResponseBacktrack { node_id: id, worker_id: None };
+                    Some(id)
                 }
             }
         }
