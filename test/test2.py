@@ -43,21 +43,13 @@ def get_coords(stub, query_id, nodes):
     print(f"Sending get coords stream {query_id} for nodes obtained ")
 
     def request_iterator():
-        message = executer_pb2.CoordinateRequest()
-        message.query_id = executer_pb2.QueryId(query_id = query_id)
-
-        yield message
-
         for node in nodes:
-            message = executer_pb2.CoordinateRequest()
-            message.node = node
-
-            yield message
+            yield node
 
     resp = stub.GetCoordinates(request_iterator())
 
     for coords in resp:
-        print("Node has coordinates: {}, {}".format(ccords.lat, coords.lon))
+        print("Node has coordinates: {}, {}".format(coords.lat, coords.lon))
 
 def spawn_partitioner(graph_filepath, listening_p, n_partitions, log_file):
     args = [sys.executable, "../partitioner/main.py",
