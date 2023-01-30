@@ -35,4 +35,4 @@ spec:
             - name: RUST_LOG
               value: "worker=debug"
             - name: MY_PORT
-              value: 50000
+              value: "50000"
