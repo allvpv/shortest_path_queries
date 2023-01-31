@@ -146,11 +146,8 @@ impl QueriesManager {
         &'static self,
         mut inbound: tonic::Streaming<executer::Node>,
     ) -> impl Stream<Item = Result<executer::CoordinateResponse, Status>> + Send + 'static {
-        let mut workers: Vec<WorkerExtended> = self
-            .workers
-            .iter()
-            .map(WorkerExtended::from)
-            .collect();
+        let mut workers: Vec<WorkerExtended> =
+            self.workers.iter().map(WorkerExtended::from).collect();
 
         async_stream::try_stream! {
             while let Some(node) = inbound.message().await? {

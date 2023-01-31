@@ -1,5 +1,5 @@
-use std::pin::Pin;
 use futures::Stream;
+use std::pin::Pin;
 use tonic::{Request, Response, Result, Status};
 
 use crate::globals;
@@ -50,7 +50,7 @@ impl Executer for ExecuterService {
 
     async fn get_coordinates(
         &self,
-        request: Request<tonic::Streaming<executer::Node>>
+        request: Request<tonic::Streaming<executer::Node>>,
     ) -> Result<Response<CoordinatesStream>, Status> {
         let stream = globals::queries_manager().get_coordinates_stream(request.into_inner());
 

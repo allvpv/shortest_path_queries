@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .enable_all()
         // Our "blocking" threads will do CPU-bound tasks (as opposed to IO), so the upper limit
         // should be low (default max is 512).
-        .max_blocking_threads(num_cpus - 1)
+        .max_blocking_threads(std::cmp::max(1, num_cpus))
         .build()?
         .block_on(async_main())
 }

@@ -6,8 +6,8 @@ use tonic::{Request, Response, Status};
 use generated::worker::request_djikstra;
 use generated::worker::worker_server::Worker;
 use generated::worker::{
-    ArePresent, ForgetQueryMessage, NodeIds, RequestBacktrack, RequestDjikstra, ResponseBacktrack,
-    ResponseDjikstra, RequestCoordinates, Coordinates
+    ArePresent, Coordinates, ForgetQueryMessage, NodeIds, RequestBacktrack, RequestCoordinates,
+    RequestDjikstra, ResponseBacktrack, ResponseDjikstra,
 };
 
 use crate::globals;
@@ -112,7 +112,7 @@ impl Worker for WorkerService {
         &self,
         request: Request<RequestCoordinates>,
     ) -> Result<Response<Coordinates>, Status> {
-        let request  = request.into_inner();
+        let request = request.into_inner();
 
         let node_idx = globals::mapping().get_mapping(request.node_id)?;
         let (lat, lon) = globals::graph().get_node(node_idx).coords;

@@ -129,7 +129,6 @@ impl QueryCoordinator {
             .await?
             .into_inner();
 
-
         Ok(stream)
     }
 
