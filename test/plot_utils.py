@@ -23,7 +23,7 @@ def get_path_plot(
     fig = px.line_mapbox(
         lat=lat,
         lon=lon,
-        text=["start"] + [str(i) for i in range(1, len(lat) - 1)] + ["end"],
+        text=["end"] + [str(i) for i in range(1, len(lat) - 1)] + ["start"],
         center=dict(lat=43.73743, lon=7.424688),
         zoom=14,
         mapbox_style="open-street-map",
